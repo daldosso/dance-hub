@@ -117,6 +117,7 @@ export default function Home() {
 
   function handleEdit(iscritto: Iscritto) {
     setSelezionato(iscritto);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...rest } = iscritto;
     setForm(rest);
   }
