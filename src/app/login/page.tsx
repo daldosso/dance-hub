@@ -2,21 +2,65 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+const AUTH_KEY = "dance-hub-auth";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    // TODO: collega qui la tua API di autenticazione
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!baseUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL non è configurata");
+      }
 
-    alert(`Login simulato per: ${email}`);
-    setLoading(false);
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const message =
+          res.status === 401
+            ? "Credenziali non valide."
+            : "Errore durante il login.";
+        throw new Error(message);
+      }
+
+      const data = (await res.json().catch(() => ({}))) as {
+        token?: string;
+      };
+
+      // Salva una "sessione" minimale nel browser
+      window.localStorage.setItem(
+        AUTH_KEY,
+        JSON.stringify({
+          email,
+          token: data.token,
+          loggedInAt: new Date().toISOString(),
+        }),
+      );
+
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      setError("Impossibile effettuare il login. Riprova.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -61,6 +105,8 @@ export default function LoginPage() {
               />
             </div>
 
+            {error && <p className="text-xs text-rose-300">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}
@@ -89,4 +135,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

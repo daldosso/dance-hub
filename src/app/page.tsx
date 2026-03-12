@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Livello = "Principiante" | "Intermedio" | "Avanzato";
 type StatoIscrizione = "Attivo" | "In sospeso" | "Arretrato";
@@ -20,6 +21,8 @@ type Iscritto = {
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
 const stati: StatoIscrizione[] = ["Attivo", "In sospeso", "Arretrato"];
 
+const AUTH_KEY = "dance-hub-auth";
+
 const corsiPredefiniti = [
   "Salsa Cubana",
   "Salsa Portoricana",
@@ -29,12 +32,15 @@ const corsiPredefiniti = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [iscritti, setIscritti] = useState<Iscritto[]>([]);
   const [selezionato, setSelezionato] = useState<Iscritto | null>(null);
   const [filtroTesto, setFiltroTesto] = useState("");
   const [filtroStato, setFiltroStato] = useState<StatoIscrizione | "Tutti">(
     "Tutti",
   );
+   const [loadingIscritti, setLoadingIscritti] = useState(true);
+   const [errorIscritti, setErrorIscritti] = useState<string | null>(null);
 
   const [form, setForm] = useState<Omit<Iscritto, "id">>({
     nome: "",
@@ -68,6 +74,128 @@ export default function Home() {
 
     return { totali, attivi, arretrati };
   }, [iscritti]);
+
+  // Protegge la pagina: se non c'è una "sessione" nel browser,
+  // rimanda l'utente alla pagina di login.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(AUTH_KEY);
+      if (!raw) {
+        router.replace("/login");
+        return;
+      }
+
+      // Se in futuro vuoi fare controlli extra (es. scadenza), puoi farlo qui.
+    } catch (err) {
+      console.error(err);
+      router.replace("/login");
+    }
+  }, [router]);
+
+  // Carica gli iscritti dal backend
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!baseUrl) {
+      setErrorIscritti("NEXT_PUBLIC_API_URL non è configurata.");
+      setLoadingIscritti(false);
+      return;
+    }
+
+    async function loadUsers() {
+      try {
+        setLoadingIscritti(true);
+        setErrorIscritti(null);
+
+        let token: string | undefined;
+        if (typeof window !== "undefined") {
+          try {
+            const raw = window.localStorage.getItem(AUTH_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw) as { token?: string };
+              token = parsed.token;
+            }
+          } catch {
+            // ignora, continueremo senza token
+          }
+        }
+
+        const res = await fetch(`${baseUrl}/api/users`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Errore ${res.status} nel caricamento utenti`);
+        }
+
+        const raw = await res.json();
+
+        const users: any[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.users)
+            ? raw.users
+            : [];
+
+        if (!users.length) {
+          setIscritti([]);
+          return;
+        }
+
+        const mapped: Iscritto[] = users.map((u: any, index: number) => {
+          const fullName: string = u.fullName ?? "";
+          const [nomeFromName, ...restCognome] = fullName.split(" ");
+
+          const skill: string | null =
+            typeof u.skillLevel === "string" ? u.skillLevel : null;
+          const livello: Livello =
+            skill === "intermediate"
+              ? "Intermedio"
+              : skill === "advanced" || skill === "pro"
+                ? "Avanzato"
+                : "Principiante";
+
+          const stato: StatoIscrizione = "Attivo";
+
+          const danceStyles: string[] = Array.isArray(u.danceStyles)
+            ? u.danceStyles
+            : [];
+
+          const primoStile =
+            danceStyles[0] ??
+            (typeof u.city === "string" ? u.city : "Non specificato");
+
+          return {
+            id: typeof u.id === "number" ? u.id : index + 1,
+            nome: nomeFromName || "N/D",
+            cognome: restCognome.length ? restCognome.join(" ") : "N/D",
+            email: typeof u.email === "string" ? u.email : "",
+            telefono: "",
+            corso: primoStile,
+            livello,
+            stato,
+            note: undefined,
+          };
+        });
+
+        setIscritti(mapped);
+      } catch (err) {
+        console.error(err);
+        setErrorIscritti(
+          err instanceof Error
+            ? err.message
+            : "Errore imprevisto nel caricamento iscritti.",
+        );
+      } finally {
+        setLoadingIscritti(false);
+      }
+    }
+
+    void loadUsers();
+  }, []);
 
   function resetForm() {
     setForm({
@@ -216,14 +344,32 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {iscrittiFiltrati.length === 0 ? (
+                  {loadingIscritti ? (
                     <tr>
                       <td
                         colSpan={5}
                         className="px-4 py-6 text-center text-xs text-slate-400"
                       >
-                        Nessun iscritto presente. Aggiungi il primo utilizzando
-                        il modulo qui a fianco.
+                        Caricamento iscritti in corso…
+                      </td>
+                    </tr>
+                  ) : errorIscritti ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center text-xs text-rose-300"
+                      >
+                        {errorIscritti}
+                      </td>
+                    </tr>
+                  ) : iscrittiFiltrati.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center text-xs text-slate-400"
+                      >
+                        Nessun iscritto presente. Aggiungi il primo
+                        utilizzando il modulo qui a fianco.
                       </td>
                     </tr>
                   ) : (
