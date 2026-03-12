@@ -74,7 +74,7 @@ export default function Home() {
   });
 
   const iscrittiFiltrati = useMemo(() => {
-    return iscritti.filter((i) => {
+    const filtrati = iscritti.filter((i) => {
       const matchTesto =
         filtroTesto.trim().length === 0 ||
         `${i.nome} ${i.cognome} ${i.email} ${i.corso}`
@@ -85,6 +85,23 @@ export default function Home() {
         filtroStato === "Tutti" ? true : i.stato === filtroStato;
 
       return matchTesto && matchStato;
+    });
+
+    return [...filtrati].sort((a, b) => {
+      const aHasPhoto = Boolean(a.photoUrl);
+      const bHasPhoto = Boolean(b.photoUrl);
+
+      if (aHasPhoto !== bHasPhoto) {
+        // Quelli con foto prima
+        return aHasPhoto ? -1 : 1;
+      }
+
+      const nameA = `${a.nome} ${a.cognome}`.toLowerCase();
+      const nameB = `${b.nome} ${b.cognome}`.toLowerCase();
+
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+      return 0;
     });
   }, [iscritti, filtroTesto, filtroStato]);
 
