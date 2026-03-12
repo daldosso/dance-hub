@@ -18,6 +18,19 @@ type Iscritto = {
   note?: string;
 };
 
+type BackendUser = {
+  id: number;
+  email: string | null;
+  username: string | null;
+  fullName: string | null;
+  city: string | null;
+  danceStyles: string[] | null;
+  skillLevel: string | null;
+  isTeacher: boolean | null;
+  isOrganizer: boolean | null;
+  profilePictureUrl: string | null;
+};
+
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
 const stati: StatoIscrizione[] = ["Attivo", "In sospeso", "Arretrato"];
 
@@ -132,12 +145,12 @@ export default function Home() {
           throw new Error(`Errore ${res.status} nel caricamento utenti`);
         }
 
-        const raw = await res.json();
+        const raw: unknown = await res.json();
 
-        const users: any[] = Array.isArray(raw)
-          ? raw
-          : Array.isArray(raw?.users)
-            ? raw.users
+        const users: BackendUser[] = Array.isArray(raw)
+          ? (raw as BackendUser[])
+          : Array.isArray((raw as { users?: BackendUser[] | undefined })?.users)
+            ? ((raw as { users?: BackendUser[] }).users ?? [])
             : [];
 
         if (!users.length) {
@@ -145,7 +158,7 @@ export default function Home() {
           return;
         }
 
-        const mapped: Iscritto[] = users.map((u: any, index: number) => {
+        const mapped: Iscritto[] = users.map((u, index) => {
           const fullName: string = u.fullName ?? "";
           const [nomeFromName, ...restCognome] = fullName.split(" ");
 
