@@ -355,8 +355,7 @@ export default function Home() {
       }
 
       const formData = new FormData();
-      // Proviamo più nomi di campo comuni; il backend userà quello che si aspetta.
-      formData.append("file", photoFile);
+      // Il backend si aspetta il campo "profilePhoto" e lo userId
       formData.append("profilePhoto", photoFile);
       formData.append("userId", String(selezionato.id));
 
