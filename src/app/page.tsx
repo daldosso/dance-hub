@@ -599,7 +599,7 @@ export default function Home() {
           <section className="w-full rounded-xl border border-emerald-500/30 bg-slate-900/60 p-4 shadow-lg backdrop-blur lg:w-80">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">
-                {selezionato ? "Modifica iscritto" : "Nuovo iscritto"}
+                {selezionato ? "Dettaglio iscritto" : "Nuovo iscritto"}
               </h2>
               {selezionato && (
                 <button
@@ -611,6 +611,31 @@ export default function Home() {
                 </button>
               )}
             </div>
+
+            {selezionato && (
+              <div className="mb-4 flex flex-col items-center text-center">
+                <div className="h-24 w-24 rounded-full border border-emerald-400/60 bg-slate-900/80 shadow-md flex items-center justify-center overflow-hidden">
+                  {selezionato.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={selezionato.photoUrl}
+                      alt={`${selezionato.nome} ${selezionato.cognome}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-lg font-semibold text-emerald-200">
+                      {`${selezionato.nome?.[0] ?? ""}${selezionato.cognome?.[0] ?? ""}`.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 text-sm font-semibold text-slate-100">
+                  {selezionato.nome} {selezionato.cognome}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {selezionato.email || "—"}
+                </div>
+              </div>
+            )}
 
             <form
               onSubmit={handleSubmit}
@@ -765,16 +790,20 @@ export default function Home() {
                 Foto profilo utente
               </h3>
 
-              {photoPreview && (
-                <div className="mt-3 flex justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photoPreview}
-                    alt="Anteprima foto profilo"
-                    className="h-24 w-24 rounded-full border border-emerald-400/40 object-cover shadow-md"
-                  />
-                </div>
-              )}
+                  {(photoPreview || selezionato?.photoUrl) && (
+                    <div className="mt-3 flex justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photoPreview ?? selezionato?.photoUrl ?? ""}
+                        alt={
+                          selezionato
+                            ? `Foto di ${selezionato.nome} ${selezionato.cognome}`
+                            : "Anteprima foto profilo"
+                        }
+                        className="h-32 w-32 rounded-full border border-emerald-400/60 object-cover shadow-md"
+                      />
+                    </div>
+                  )}
 
               <div className="mt-3 space-y-2 text-[11px]">
                 <input
