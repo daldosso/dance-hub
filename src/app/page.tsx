@@ -450,7 +450,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-950/60">
+            <div className="overflow-x-auto rounded-lg border border-white/10 bg-slate-950/60">
               <table className="min-w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-900/80 text-slate-300">
                   <tr>
@@ -470,7 +470,7 @@ export default function Home() {
                     <tr>
                       <td
                         colSpan={5}
-                        className="px-4 py-6 text-center text-xs text-slate-400"
+                        className="px-4 py-6 text-center text-sm text-slate-400"
                       >
                         Caricamento iscritti in corso…
                       </td>
@@ -479,7 +479,7 @@ export default function Home() {
                     <tr>
                       <td
                         colSpan={5}
-                        className="px-4 py-6 text-center text-xs text-rose-300"
+                        className="px-4 py-6 text-center text-sm text-rose-300"
                       >
                         {errorIscritti}
                       </td>
@@ -488,77 +488,86 @@ export default function Home() {
                     <tr>
                       <td
                         colSpan={5}
-                        className="px-4 py-6 text-center text-xs text-slate-400"
+                        className="px-4 py-6 text-center text-sm text-slate-400"
                       >
                         Nessun iscritto presente. Aggiungi il primo utilizzando
                         il modulo qui a fianco.
                       </td>
                     </tr>
                   ) : (
-                    iscrittiFiltrati.map((i) => (
-                      <tr
-                        key={i.id}
-                        className="border-t border-white/5 odd:bg-slate-950/40 hover:bg-slate-900/60"
-                      >
-                        <td className="px-3 py-2 sm:px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-200 ring-1 ring-slate-700/60">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              {i.photoUrl ? (
-                                <img
-                                  src={i.photoUrl}
-                                  alt={`${i.nome} ${i.cognome}`}
-                                  className="h-8 w-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <span>
-                                  {`${i.nome?.[0] ?? ""}${i.cognome?.[0] ?? ""}`.toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {i.nome} {i.cognome}
+                    iscrittiFiltrati.map((i) => {
+                      const isSelected = selezionato?.id === i.id;
+
+                      return (
+                        <tr
+                          key={i.id}
+                          onClick={() => handleEdit(i)}
+                          className={`cursor-pointer border-t border-white/5 odd:bg-slate-950/40 hover:bg-slate-900/60 ${
+                            isSelected ? "bg-sky-700/40" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-slate-200 ring-1 ring-slate-700/60">
+                                {i.photoUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={i.photoUrl}
+                                    alt={`${i.nome} ${i.cognome}`}
+                                    className="h-10 w-10 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span>
+                                    {`${i.nome?.[0] ?? ""}${i.cognome?.[0] ?? ""}`.toUpperCase()}
+                                  </span>
+                                )}
                               </div>
-                              <div className="text-[11px] text-slate-400">
-                                {i.email || "—"}
+                              <div>
+                                <div className="font-medium">
+                                  {i.nome} {i.cognome}
+                                </div>
+                                <div className="text-slate-400 text-[12px] sm:text-sm">
+                                  {i.email || "—"}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-xs sm:px-4">{i.corso}</td>
-                        <td className="hidden px-3 py-2 text-xs md:table-cell sm:px-4">
-                          {i.livello}
-                        </td>
-                        <td className="px-3 py-2 sm:px-4">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              i.stato === "Attivo"
-                                ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-500/40"
-                                : i.stato === "Arretrato"
-                                  ? "bg-rose-400/15 text-rose-300 ring-1 ring-rose-500/40"
-                                  : "bg-amber-400/10 text-amber-200 ring-1 ring-amber-400/40"
-                            }`}
-                          >
-                            {i.stato}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right text-[11px] sm:px-4">
-                          <button
-                            onClick={() => handleEdit(i)}
-                            className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
-                          >
-                            Modifica
-                          </button>
-                          <button
-                            onClick={() => handleDelete(i.id)}
-                            className="ml-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20"
-                          >
-                            Elimina
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                            {i.corso}
+                          </td>
+                          <td className="hidden px-3 py-3 md:table-cell sm:px-4 text-sm sm:text-base">
+                            {i.livello}
+                          </td>
+                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                i.stato === "Attivo"
+                                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-500/40"
+                                  : i.stato === "Arretrato"
+                                    ? "bg-rose-400/15 text-rose-300 ring-1 ring-rose-500/40"
+                                    : "bg-amber-400/10 text-amber-200 ring-1 ring-amber-400/40"
+                              }`}
+                            >
+                              {i.stato}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right text-sm sm:text-base sm:px-4">
+                            <button
+                              onClick={() => handleEdit(i)}
+                              className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
+                            >
+                              Modifica
+                            </button>
+                            <button
+                              onClick={() => handleDelete(i.id)}
+                              className="ml-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20"
+                            >
+                              Elimina
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -749,6 +758,7 @@ export default function Home() {
                 <input
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={handlePhotoChange}
                   className="block w-full text-[11px] text-slate-200 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-slate-950 hover:file:bg-emerald-400"
                 />
