@@ -313,6 +313,11 @@ export default function Home() {
       setPhotoError(null);
       setPhotoSuccess(null);
 
+      if (!selezionato) {
+        setPhotoError("Seleziona prima un utente dalla griglia.");
+        return;
+      }
+
       if (!photoFile) {
         setPhotoError("Seleziona prima un file immagine.");
         return;
@@ -353,6 +358,7 @@ export default function Home() {
       // Proviamo più nomi di campo comuni; il backend userà quello che si aspetta.
       formData.append("file", photoFile);
       formData.append("profilePhoto", photoFile);
+      formData.append("userId", String(selezionato.id));
 
       setPhotoUploading(true);
 
