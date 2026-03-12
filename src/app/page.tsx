@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type Livello = "Principiante" | "Intermedio" | "Avanzato";
@@ -16,6 +16,7 @@ type Iscritto = {
   livello: Livello;
   stato: StatoIscrizione;
   note?: string;
+  photoUrl?: string;
 };
 
 type BackendUser = {
@@ -52,8 +53,14 @@ export default function Home() {
   const [filtroStato, setFiltroStato] = useState<StatoIscrizione | "Tutti">(
     "Tutti",
   );
-   const [loadingIscritti, setLoadingIscritti] = useState(true);
-   const [errorIscritti, setErrorIscritti] = useState<string | null>(null);
+  const [loadingIscritti, setLoadingIscritti] = useState(true);
+  const [errorIscritti, setErrorIscritti] = useState<string | null>(null);
+
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoSuccess, setPhotoSuccess] = useState<string | null>(null);
 
   const [form, setForm] = useState<Omit<Iscritto, "id">>({
     nome: "",
@@ -74,7 +81,8 @@ export default function Home() {
           .toLowerCase()
           .includes(filtroTesto.toLowerCase());
 
-      const matchStato = filtroStato === "Tutti" ? true : i.stato === filtroStato;
+      const matchStato =
+        filtroStato === "Tutti" ? true : i.stato === filtroStato;
 
       return matchTesto && matchStato;
     });
@@ -87,6 +95,15 @@ export default function Home() {
 
     return { totali, attivi, arretrati };
   }, [iscritti]);
+
+  // Pulisce l'URL di anteprima quando cambia file o si smonta il componente
+  useEffect(() => {
+    return () => {
+      if (photoPreview) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
 
   // Protegge la pagina: se non c'è una "sessione" nel browser,
   // rimanda l'utente alla pagina di login.
@@ -191,6 +208,10 @@ export default function Home() {
             livello,
             stato,
             note: undefined,
+            photoUrl:
+              typeof u.profilePictureUrl === "string"
+                ? u.profilePictureUrl
+                : undefined,
           };
         });
 
@@ -271,6 +292,98 @@ export default function Home() {
     }
   }
 
+  function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPhotoError(null);
+    setPhotoSuccess(null);
+
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  }
+
+  async function handlePhotoUpload() {
+    try {
+      setPhotoError(null);
+      setPhotoSuccess(null);
+
+      if (!photoFile) {
+        setPhotoError("Seleziona prima un file immagine.");
+        return;
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!baseUrl) {
+        setPhotoError("NEXT_PUBLIC_API_URL non è configurata.");
+        return;
+      }
+
+      if (typeof window === "undefined") {
+        setPhotoError("Upload disponibile solo dal browser.");
+        return;
+      }
+
+      const rawAuth = window.localStorage.getItem(AUTH_KEY);
+      if (!rawAuth) {
+        setPhotoError("Sessione non trovata. Esegui di nuovo il login.");
+        return;
+      }
+
+      let token: string | undefined;
+      try {
+        const parsed = JSON.parse(rawAuth) as { token?: string };
+        token = parsed.token;
+      } catch {
+        setPhotoError("Dati di sessione non validi. Esegui di nuovo il login.");
+        return;
+      }
+
+      if (!token) {
+        setPhotoError("Token mancante. Esegui di nuovo il login.");
+        return;
+      }
+
+      const formData = new FormData();
+      // Proviamo più nomi di campo comuni; il backend userà quello che si aspetta.
+      formData.append("file", photoFile);
+      formData.append("profilePhoto", photoFile);
+
+      setPhotoUploading(true);
+
+      const res = await fetch(`${baseUrl}/api/users/profile-photo`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Upload photo error:", res.status, text);
+        setPhotoError(
+          res.status === 401
+            ? "Non autorizzato. Esegui di nuovo il login."
+            : "Errore durante il caricamento della foto.",
+        );
+        return;
+      }
+
+      setPhotoSuccess("Foto caricata con successo.");
+    } catch (err) {
+      console.error(err);
+      setPhotoError("Errore imprevisto durante l'upload della foto.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
@@ -287,25 +400,19 @@ export default function Home() {
               <p className="text-xs uppercase tracking-wide text-emerald-300">
                 Totale iscritti
               </p>
-              <p className="mt-1 text-2xl font-semibold">
-                {stats.totali}
-              </p>
+              <p className="mt-1 text-2xl font-semibold">{stats.totali}</p>
             </div>
             <div className="rounded-lg border border-sky-400/30 bg-sky-400/10 px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-sky-300">
                 Attivi
               </p>
-              <p className="mt-1 text-2xl font-semibold">
-                {stats.attivi}
-              </p>
+              <p className="mt-1 text-2xl font-semibold">{stats.attivi}</p>
             </div>
             <div className="rounded-lg border border-rose-400/30 bg-rose-400/10 px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-rose-300">
                 Arretrati
               </p>
-              <p className="mt-1 text-2xl font-semibold">
-                {stats.arretrati}
-              </p>
+              <p className="mt-1 text-2xl font-semibold">{stats.arretrati}</p>
             </div>
           </div>
         </header>
@@ -326,7 +433,9 @@ export default function Home() {
                   <select
                     value={filtroStato}
                     onChange={(e) =>
-                      setFiltroStato(e.target.value as StatoIscrizione | "Tutti")
+                      setFiltroStato(
+                        e.target.value as StatoIscrizione | "Tutti",
+                      )
                     }
                     className="w-full rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 sm:w-40"
                   >
@@ -381,8 +490,8 @@ export default function Home() {
                         colSpan={5}
                         className="px-4 py-6 text-center text-xs text-slate-400"
                       >
-                        Nessun iscritto presente. Aggiungi il primo
-                        utilizzando il modulo qui a fianco.
+                        Nessun iscritto presente. Aggiungi il primo utilizzando
+                        il modulo qui a fianco.
                       </td>
                     </tr>
                   ) : (
@@ -392,16 +501,32 @@ export default function Home() {
                         className="border-t border-white/5 odd:bg-slate-950/40 hover:bg-slate-900/60"
                       >
                         <td className="px-3 py-2 sm:px-4">
-                          <div className="font-medium">
-                            {i.nome} {i.cognome}
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            {i.email || "—"}
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-[11px] font-semibold text-slate-200 ring-1 ring-slate-700/60">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              {i.photoUrl ? (
+                                <img
+                                  src={i.photoUrl}
+                                  alt={`${i.nome} ${i.cognome}`}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span>
+                                  {`${i.nome?.[0] ?? ""}${i.cognome?.[0] ?? ""}`.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {i.nome} {i.cognome}
+                              </div>
+                              <div className="text-[11px] text-slate-400">
+                                {i.email || "—"}
+                              </div>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-xs sm:px-4">
-                          {i.corso}
-                        </td>
+                        <td className="px-3 py-2 text-xs sm:px-4">{i.corso}</td>
                         <td className="hidden px-3 py-2 text-xs md:table-cell sm:px-4">
                           {i.livello}
                         </td>
@@ -604,11 +729,47 @@ export default function Home() {
               </button>
             </form>
 
-            <p className="mt-3 text-[11px] text-slate-400">
-              I dati sono salvati solo in memoria per questa sessione. Per
-              persistenza reale potrai collegare un database (es. SQLite,
-              Postgres, Supabase).
-            </p>
+            <div className="mt-6 border-t border-emerald-500/20 pt-4">
+              <h3 className="text-sm font-semibold text-slate-100">
+                Foto profilo utente
+              </h3>
+
+              {photoPreview && (
+                <div className="mt-3 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt="Anteprima foto profilo"
+                    className="h-24 w-24 rounded-full border border-emerald-400/40 object-cover shadow-md"
+                  />
+                </div>
+              )}
+
+              <div className="mt-3 space-y-2 text-[11px]">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="block w-full text-[11px] text-slate-200 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-slate-950 hover:file:bg-emerald-400"
+                />
+
+                <button
+                  type="button"
+                  onClick={handlePhotoUpload}
+                  disabled={photoUploading}
+                  className="inline-flex w-full items-center justify-center rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {photoUploading ? "Caricamento..." : "Carica foto profilo"}
+                </button>
+
+                {photoError && (
+                  <p className="text-[11px] text-rose-300">{photoError}</p>
+                )}
+                {photoSuccess && (
+                  <p className="text-[11px] text-emerald-300">{photoSuccess}</p>
+                )}
+              </div>
+            </div>
           </section>
         </main>
       </div>
