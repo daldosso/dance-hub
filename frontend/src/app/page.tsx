@@ -19,6 +19,10 @@ type Iscritto = {
   photoUrl?: string;
 };
 
+type Corso = {
+  id: number;
+  title: string;
+};
 type BackendUser = {
   id: number;
   email: string | null;
@@ -61,6 +65,11 @@ export default function Home() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoSuccess, setPhotoSuccess] = useState<string | null>(null);
+
+  const [corsi, setCorsi] = useState<Corso[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">(
+    "ALL",
+  );
 
   const [form, setForm] = useState<Omit<Iscritto, "id">>({
     nome: "",
@@ -248,6 +257,34 @@ export default function Home() {
     void loadUsers();
   }, []);
 
+  // Carica l'elenco corsi per la combo in header
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!baseUrl) {
+      return;
+    }
+
+    async function loadCourses() {
+      try {
+        const res = await fetch(`${baseUrl}/api/courses`);
+        if (!res.ok) return;
+
+        const raw = (await res.json()) as { courses?: { id: number; title: string }[] };
+        if (Array.isArray(raw.courses)) {
+          const mapped: Corso[] = raw.courses
+            .filter((c) => typeof c.title === "string" && c.title.trim().length > 0)
+            .map((c) => ({ id: Number(c.id), title: c.title.trim() }));
+
+          setCorsi(mapped);
+        }
+      } catch (err) {
+        console.error("Errore nel caricamento corsi", err);
+      }
+    }
+
+    void loadCourses();
+  }, []);
+
   function resetForm() {
     setForm({
       nome: "",
@@ -408,14 +445,39 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 lg:px-8">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 lg:px-10">
         <header className="mb-4 border-b border-white/10 pb-3 sm:mb-6 sm:pb-4">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-            Dance Hub
-          </h1>
-          <p className="mt-0.5 text-xs text-slate-300 sm:mt-1 sm:text-sm lg:text-base">
-            Gestione iscritti scuola di ballo
-          </p>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                Dance Hub
+              </h1>
+              <p className="mt-0.5 text-xs text-slate-300 sm:mt-1 sm:text-sm lg:text-base">
+                Gestione iscritti scuola di ballo
+              </p>
+            </div>
+
+            <div className="w-full lg:w-[420px] xl:w-[520px]">
+              <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                Corso
+              </label>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedCourseId(value === "ALL" ? "ALL" : Number(value));
+                }}
+                className="w-full rounded-lg border border-emerald-400/40 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 shadow-sm outline-none ring-1 ring-transparent transition focus:border-emerald-400 focus:ring-emerald-400/60 sm:text-sm"
+              >
+                <option value="ALL">Tutti i corsi</option>
+                {corsi.map((corso) => (
+                  <option key={corso.id} value={corso.id}>
+                    {corso.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           {/* Statistiche: visibili solo da tablet in su per non occupare spazio su mobile */}
           <div className="mt-4 hidden gap-3 text-sm sm:grid sm:grid-cols-3">
