@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type Livello = "Principiante" | "Intermedio" | "Avanzato";
@@ -457,25 +458,36 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="w-full lg:w-[420px] xl:w-[520px]">
-              <label className="mb-1 block text-[11px] font-medium text-slate-200">
-                Corso
-              </label>
-              <select
-                value={selectedCourseId}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSelectedCourseId(value === "ALL" ? "ALL" : Number(value));
-                }}
-                className="w-full rounded-lg border border-emerald-400/40 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 shadow-sm outline-none ring-1 ring-transparent transition focus:border-emerald-400 focus:ring-emerald-400/60 sm:text-sm"
-              >
-                <option value="ALL">Tutti i corsi</option>
-                {corsi.map((corso) => (
-                  <option key={corso.id} value={corso.id}>
-                    {corso.title}
-                  </option>
-                ))}
-              </select>
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto lg:justify-end">
+              <div className="flex-1 lg:w-[320px] xl:w-[420px]">
+                <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                  Corso
+                </label>
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedCourseId(value === "ALL" ? "ALL" : Number(value));
+                  }}
+                  className="w-full rounded-lg border border-emerald-400/40 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 shadow-sm outline-none ring-1 ring-transparent transition focus:border-emerald-400 focus:ring-emerald-400/60 sm:text-sm"
+                >
+                  <option value="ALL">Tutti i corsi</option>
+                  {corsi.map((corso) => (
+                    <option key={corso.id} value={corso.id}>
+                      {corso.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  href="/payments"
+                  className="inline-flex items-center justify-center rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-100 shadow-sm transition hover:bg-sky-500/20 sm:text-sm"
+                >
+                  Pagamenti
+                </Link>
+              </div>
             </div>
           </div>
 
