@@ -238,7 +238,7 @@ export default function PaymentsPage() {
       if (nameA > nameB) return 1;
       return 0;
     });
-  }, [iscritti]);
+  }, [iscritti, selectedCourseId]);
 
   function togglePagamento(userId: number, monthKey: string) {
     setMatrix((prev) => {

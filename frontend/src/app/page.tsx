@@ -121,7 +121,7 @@ export default function Home() {
       if (nameA > nameB) return 1;
       return 0;
     });
-  }, [iscritti, filtroTesto, filtroStato]);
+  }, [iscritti, filtroTesto, filtroStato, selectedCourseId]);
 
   const stats = useMemo(() => {
     const totali = iscritti.length;
