@@ -11,6 +11,7 @@ type Iscritto = {
   cognome: string;
   email: string;
   photoUrl?: string;
+  courseIds?: number[];
 };
 
 type BackendUser = {
@@ -18,6 +19,7 @@ type BackendUser = {
   fullName: string | null;
   email: string | null;
   profilePictureUrl?: string | null;
+  courses?: { id: number; title: string }[];
 };
 
 type Corso = {
@@ -128,6 +130,11 @@ export default function PaymentsPage() {
           const fullName = u.fullName ?? "";
           const [nome, ...rest] = fullName.split(" ");
 
+          const courseIds =
+            Array.isArray(u.courses) && u.courses.length > 0
+              ? u.courses.map((c) => Number(c.id))
+              : [];
+
           return {
             id: typeof u.id === "number" ? u.id : index + 1,
             nome: nome || "N/D",
@@ -137,6 +144,7 @@ export default function PaymentsPage() {
               typeof u.profilePictureUrl === "string"
                 ? u.profilePictureUrl
                 : undefined,
+            courseIds,
           };
         });
 
@@ -204,6 +212,34 @@ export default function PaymentsPage() {
 
   const hasData = useMemo(() => iscritti.length > 0, [iscritti]);
 
+  const iscrittiOrdinati = useMemo(() => {
+    const filtrati =
+      selectedCourseId === "ALL"
+        ? iscritti
+        : iscritti.filter(
+            (i) =>
+              Array.isArray(i.courseIds) &&
+              i.courseIds.includes(selectedCourseId),
+          );
+
+    const cloned = [...filtrati];
+    return cloned.sort((a, b) => {
+      const aHasPhoto = Boolean(a.photoUrl);
+      const bHasPhoto = Boolean(b.photoUrl);
+
+      if (aHasPhoto !== bHasPhoto) {
+        return aHasPhoto ? -1 : 1;
+      }
+
+      const nameA = `${a.nome} ${a.cognome}`.toLowerCase();
+      const nameB = `${b.nome} ${b.cognome}`.toLowerCase();
+
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+      return 0;
+    });
+  }, [iscritti]);
+
   function togglePagamento(userId: number, monthKey: string) {
     setMatrix((prev) => {
       const userRow = prev[userId] ?? {};
@@ -248,7 +284,7 @@ export default function PaymentsPage() {
 
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto lg:justify-end">
               <div className="flex-1 lg:w-[320px] xl:w-[420px]">
-                <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                <label className="mb-1 block text-xs font-semibold text-slate-100 sm:text-[13px]">
                   Corso
                 </label>
                 <select
@@ -305,7 +341,7 @@ export default function PaymentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {iscritti.map((i) => (
+                  {iscrittiOrdinati.map((i) => (
                     <tr
                       key={i.id}
                       className="border-t border-white/5 odd:bg-slate-950/40 hover:bg-slate-900/60"

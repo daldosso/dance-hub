@@ -10,6 +10,7 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
     "seed:courses": "ts-node-dev --transpile-only prisma/seed-courses.ts",
+    "seed:enrollments": "ts-node-dev --transpile-only prisma/seed-enrollments.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "postinstall": "prisma generate"

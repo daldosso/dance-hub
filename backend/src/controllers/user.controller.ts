@@ -19,21 +19,43 @@ export async function listUsers(req: Request, res: Response) {
         is_teacher: true,
         is_organizer: true,
         profile_picture_url: true,
+        course_enrollments: {
+          select: {
+            course_id: true,
+            courses: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    const mapped = users.map((user) => ({
-      id: Number(user.id),
-      email: user.email,
-      username: user.username,
-      fullName: user.full_name,
-      city: user.city,
-      danceStyles: user.dance_styles,
-      skillLevel: user.skill_level,
-      isTeacher: user.is_teacher,
-      isOrganizer: user.is_organizer,
-      profilePictureUrl: user.profile_picture_url,
-    }));
+    const mapped = users.map((user) => {
+      const courses =
+        user.course_enrollments
+          ?.map((ce) => ce.courses)
+          .filter((c): c is { id: bigint; title: string } => Boolean(c)) ?? [];
+
+      return {
+        id: Number(user.id),
+        email: user.email,
+        username: user.username,
+        fullName: user.full_name,
+        city: user.city,
+        danceStyles: user.dance_styles,
+        skillLevel: user.skill_level,
+        isTeacher: user.is_teacher,
+        isOrganizer: user.is_organizer,
+        profilePictureUrl: user.profile_picture_url,
+        courses: courses.map((c) => ({
+          id: Number(c.id),
+          title: c.title,
+        })),
+      };
+    });
 
     res.json({ users: mapped });
   } catch (error: any) {

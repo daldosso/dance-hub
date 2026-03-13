@@ -18,6 +18,7 @@ type Iscritto = {
   stato: StatoIscrizione;
   note?: string;
   photoUrl?: string;
+  courseIds?: number[];
 };
 
 type Corso = {
@@ -35,6 +36,7 @@ type BackendUser = {
   isTeacher: boolean | null;
   isOrganizer: boolean | null;
   profilePictureUrl: string | null;
+  courses?: { id: number; title: string }[];
 };
 
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
@@ -94,7 +96,13 @@ export default function Home() {
       const matchStato =
         filtroStato === "Tutti" ? true : i.stato === filtroStato;
 
-      return matchTesto && matchStato;
+      const matchCorso =
+        selectedCourseId === "ALL"
+          ? true
+          : Array.isArray(i.courseIds) &&
+            i.courseIds.includes(selectedCourseId);
+
+      return matchTesto && matchStato && matchCorso;
     });
 
     return [...filtrati].sort((a, b) => {
@@ -221,9 +229,21 @@ export default function Home() {
             ? u.danceStyles
             : [];
 
-          const primoStile =
+          const courseIds =
+            Array.isArray(u.courses) && u.courses.length > 0
+              ? u.courses.map((c) => Number(c.id))
+              : [];
+
+          const corsoDaCourses =
+            Array.isArray(u.courses) && u.courses.length > 0
+              ? u.courses[0]?.title ?? ""
+              : "";
+
+          const primoStileFallback =
             danceStyles[0] ??
             (typeof u.city === "string" ? u.city : "Non specificato");
+
+          const corso = corsoDaCourses || primoStileFallback;
 
           return {
             id: typeof u.id === "number" ? u.id : index + 1,
@@ -231,7 +251,7 @@ export default function Home() {
             cognome: restCognome.length ? restCognome.join(" ") : "N/D",
             email: typeof u.email === "string" ? u.email : "",
             telefono: "",
-            corso: primoStile,
+            corso,
             livello,
             stato,
             note: undefined,
@@ -239,6 +259,7 @@ export default function Home() {
               typeof u.profilePictureUrl === "string"
                 ? u.profilePictureUrl
                 : undefined,
+            courseIds,
           };
         });
 
@@ -460,7 +481,7 @@ export default function Home() {
 
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end lg:w-auto lg:justify-end">
               <div className="flex-1 lg:w-[320px] xl:w-[420px]">
-                <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                <label className="mb-1 block text-xs font-semibold text-slate-100 sm:text-[13px]">
                   Corso
                 </label>
                 <select
