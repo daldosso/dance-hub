@@ -408,16 +408,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <header className="mb-8 border-b border-white/10 pb-4">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 lg:px-8">
+        <header className="mb-4 border-b border-white/10 pb-3 sm:mb-6 sm:pb-4">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
             Dance Hub
           </h1>
-          <p className="mt-1 text-sm text-slate-300 sm:text-base">
+          <p className="mt-0.5 text-xs text-slate-300 sm:mt-1 sm:text-sm lg:text-base">
             Gestione iscritti scuola di ballo
           </p>
 
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+          {/* Statistiche: visibili solo da tablet in su per non occupare spazio su mobile */}
+          <div className="mt-4 hidden gap-3 text-sm sm:grid sm:grid-cols-3">
             <div className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-emerald-300">
                 Totale iscritti
@@ -439,8 +440,8 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-6 pb-6 lg:flex-row">
-          <section className="flex-1 rounded-xl border border-white/10 bg-slate-900/60 p-4 shadow-lg backdrop-blur">
+        <main className="flex flex-1 flex-col gap-4 pb-4 sm:gap-6 sm:pb-6 lg:flex-row">
+          <section className="flex-1 rounded-xl border border-white/10 bg-slate-900/60 p-3 shadow-lg backdrop-blur sm:p-4">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold">Iscritti</h2>
@@ -470,7 +471,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-white/10 bg-slate-950/60">
+            <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-950/60">
               <table className="min-w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-900/80 text-slate-300">
                   <tr>
@@ -526,7 +527,7 @@ export default function Home() {
                             isSelected ? "bg-sky-700/40" : ""
                           }`}
                         >
-                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-slate-200 ring-1 ring-slate-700/60">
                                 {i.photoUrl ? (
@@ -552,13 +553,13 @@ export default function Home() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base">
                             {i.corso}
                           </td>
-                          <td className="hidden px-3 py-3 md:table-cell sm:px-4 text-sm sm:text-base">
+                          <td className="hidden px-3 py-2 sm:py-3 md:table-cell sm:px-4 text-sm sm:text-base">
                             {i.livello}
                           </td>
-                          <td className="px-3 py-3 sm:px-4 text-sm sm:text-base">
+                          <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                                 i.stato === "Attivo"
@@ -571,7 +572,7 @@ export default function Home() {
                               {i.stato}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-right text-sm sm:text-base sm:px-4">
+                          <td className="px-3 py-2 text-right text-sm sm:text-base sm:px-4 sm:py-3">
                             <button
                               onClick={() => handleEdit(i)}
                               className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
@@ -594,7 +595,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="w-full rounded-xl border border-emerald-500/30 bg-slate-900/60 p-4 shadow-lg backdrop-blur lg:w-80">
+          {/* Pannello dettaglio/modifica: solo desktop/tablet largo */}
+          <section className="hidden w-full rounded-xl border border-emerald-500/30 bg-slate-900/60 p-4 shadow-lg backdrop-blur lg:block lg:w-80">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">
                 {selezionato ? "Dettaglio iscritto" : "Nuovo iscritto"}
@@ -783,7 +785,58 @@ export default function Home() {
               </button>
             </form>
 
-            <div className="mt-6 border-t border-emerald-500/20 pt-4">
+            {/* Sezione upload foto: versione mobile, mostrata sotto la lista */}
+            <div className="mt-4 border-t border-emerald-500/20 pt-3 text-[11px] text-slate-300 lg:hidden">
+              <h3 className="text-xs font-semibold text-slate-100">
+                Foto profilo (mobile)
+              </h3>
+              <p className="mt-1">
+                Seleziona un iscritto dalla lista e carica la sua foto profilo.
+              </p>
+
+              {(photoPreview || selezionato?.photoUrl) && (
+                <div className="mt-3 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview ?? selezionato?.photoUrl ?? ""}
+                    alt={
+                      selezionato
+                        ? `Foto di ${selezionato.nome} ${selezionato.cognome}`
+                        : "Anteprima foto profilo"
+                    }
+                    className="h-24 w-24 rounded-full border border-emerald-400/60 object-cover shadow-md"
+                  />
+                </div>
+              )}
+
+              <div className="mt-3 space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="block w-full text-[11px] text-slate-200 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-slate-950 hover:file:bg-emerald-400"
+                />
+
+                <button
+                  type="button"
+                  onClick={handlePhotoUpload}
+                  disabled={photoUploading}
+                  className="inline-flex w-full items-center justify-center rounded-md bg-emerald-500 px-3 py-2 text-[11px] font-semibold text-slate-950 shadow-md shadow-emerald-500/30 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {photoUploading ? "Caricamento..." : "Carica foto profilo"}
+                </button>
+
+                {photoError && (
+                  <p className="text-[11px] text-rose-300">{photoError}</p>
+                )}
+                {photoSuccess && (
+                  <p className="text-[11px] text-emerald-300">{photoSuccess}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Sezione upload foto: versione desktop nella sidebar */}
+            <div className="mt-6 hidden border-t border-emerald-500/20 pt-4 lg:block">
               <h3 className="text-sm font-semibold text-slate-100">
                 Foto profilo utente
               </h3>
