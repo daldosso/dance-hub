@@ -455,9 +455,7 @@ export default function Home() {
                   <select
                     value={filtroStato}
                     onChange={(e) =>
-                      setFiltroStato(
-                        e.target.value as StatoIscrizione | "Tutti",
-                      )
+                      setFiltroStato(e.target.value as StatoIscrizione | "Tutti")
                     }
                     className="w-full rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 sm:w-40"
                   >
@@ -789,27 +787,30 @@ export default function Home() {
               <h3 className="text-sm font-semibold text-slate-100">
                 Foto profilo utente
               </h3>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Carica la foto profilo collegata all&apos;utente attualmente
+                autenticato.
+              </p>
 
-                  {(photoPreview || selezionato?.photoUrl) && (
-                    <div className="mt-3 flex justify-center">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photoPreview ?? selezionato?.photoUrl ?? ""}
-                        alt={
-                          selezionato
-                            ? `Foto di ${selezionato.nome} ${selezionato.cognome}`
-                            : "Anteprima foto profilo"
-                        }
-                        className="h-32 w-32 rounded-full border border-emerald-400/60 object-cover shadow-md"
-                      />
-                    </div>
-                  )}
+              {(photoPreview || selezionato?.photoUrl) && (
+                <div className="mt-3 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview ?? selezionato?.photoUrl ?? ""}
+                    alt={
+                      selezionato
+                        ? `Foto di ${selezionato.nome} ${selezionato.cognome}`
+                        : "Anteprima foto profilo"
+                    }
+                    className="h-32 w-32 rounded-full border border-emerald-400/60 object-cover shadow-md"
+                  />
+                </div>
+              )}
 
               <div className="mt-3 space-y-2 text-[11px]">
                 <input
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={handlePhotoChange}
                   className="block w-full text-[11px] text-slate-200 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-slate-950 hover:file:bg-emerald-400"
                 />
@@ -837,3 +838,4 @@ export default function Home() {
     </div>
   );
 }
+
