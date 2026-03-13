@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:migrate:payments": "prisma migrate dev --name add_payments",
     "prisma:studio": "prisma studio",
     "seed:courses": "ts-node-dev --transpile-only prisma/seed-courses.ts",
     "seed:enrollments": "ts-node-dev --transpile-only prisma/seed-enrollments.ts",

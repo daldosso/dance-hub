@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type StatoPagamento = "paid" | "unpaid";
+type StatoPagamento = "paid" | "unpaid" | "suspended";
 
 type Iscritto = {
   id: number;
@@ -158,8 +158,9 @@ export default function PaymentsPage() {
           for (const mese of MESI) {
             // pattern deterministico basato su id+monthKey
             const hash = (user.id + mese.key.length) % 3;
-            const paid: StatoPagamento = hash === 0 ? "unpaid" : "paid";
-            fakeMatrix[user.id][mese.key] = { stato: paid };
+            const stato: StatoPagamento =
+              hash === 0 ? "unpaid" : hash === 1 ? "paid" : "suspended";
+            fakeMatrix[user.id][mese.key] = { stato };
           }
         }
         setMatrix(fakeMatrix);
@@ -244,7 +245,12 @@ export default function PaymentsPage() {
     setMatrix((prev) => {
       const userRow = prev[userId] ?? {};
       const current = userRow[monthKey]?.stato ?? "unpaid";
-      const next: StatoPagamento = current === "paid" ? "unpaid" : "paid";
+      const next: StatoPagamento =
+        current === "unpaid"
+          ? "paid"
+          : current === "paid"
+            ? "suspended"
+            : "unpaid";
 
       return {
         ...prev,
@@ -254,6 +260,50 @@ export default function PaymentsPage() {
         },
       };
     });
+
+    void persistPayment(userId, monthKey);
+  }
+
+  async function persistPayment(userId: number, monthKey: string) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!baseUrl) return;
+      if (typeof window === "undefined") return;
+
+      const rawAuth = window.localStorage.getItem(AUTH_KEY);
+      if (!rawAuth) return;
+
+      let token: string | undefined;
+      try {
+        const parsed = JSON.parse(rawAuth) as { token?: string };
+        token = parsed.token;
+      } catch {
+        return;
+      }
+
+      if (!token) return;
+
+      const userRow = matrix[userId];
+      const stato: StatoPagamento = userRow?.[monthKey]?.stato ?? "unpaid";
+
+      const body = {
+        userId,
+        courseId: selectedCourseId === "ALL" ? null : selectedCourseId,
+        monthKey,
+        status: stato,
+      };
+
+      await fetch(`${baseUrl}/api/payments`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      console.error("Errore nel salvataggio pagamento", err);
+    }
   }
 
   return (
@@ -375,7 +425,6 @@ export default function PaymentsPage() {
                       {MESI.map((m) => {
                         const cell = matrix[i.id]?.[m.key];
                         const stato: StatoPagamento = cell?.stato ?? "unpaid";
-                        const isPaid = stato === "paid";
 
                         return (
                           <td
@@ -386,13 +435,21 @@ export default function PaymentsPage() {
                             <button
                               type="button"
                               className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-transparent transition hover:border-white/40 focus:outline-none"
-                              title={isPaid ? "Segna come non pagato" : "Segna come pagato"}
+                              title={
+                                stato === "paid"
+                                  ? "Segna come sospeso"
+                                  : stato === "suspended"
+                                    ? "Segna come non pagato"
+                                    : "Segna come pagato"
+                              }
                             >
                               <span
                                 className={`h-3 w-3 rounded-full ${
-                                  isPaid
+                                  stato === "paid"
                                     ? "bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]"
-                                    : "bg-rose-500/80 shadow-[0_0_0_2px_rgba(248,113,113,0.35)]"
+                                    : stato === "suspended"
+                                      ? "bg-amber-300 shadow-[0_0_0_2px_rgba(252,211,77,0.5)]"
+                                      : "bg-rose-500/80 shadow-[0_0_0_2px_rgba(248,113,113,0.35)]"
                                 }`}
                               />
                             </button>
