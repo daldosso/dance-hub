@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/users.routes";
 import eventRoutes from "./routes/events.routes";
 import venueRoutes from "./routes/venues.routes";
+import courseRoutes from "./routes/courses.routes";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/venues", venueRoutes);
+app.use("/api/courses", courseRoutes);
 
 // Health check
 app.get("/health", (req: Request, res: Response) => {
