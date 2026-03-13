@@ -242,6 +242,29 @@ export default function PaymentsPage() {
   }, [iscritti, selectedCourseId]);
 
   function togglePagamento(userId: number, monthKey: string) {
+    // Senza corso selezionato non persistiamo su backend
+    if (selectedCourseId === "ALL") {
+      setMatrix((prev) => {
+        const userRow = prev[userId] ?? {};
+        const current = userRow[monthKey]?.stato ?? "unpaid";
+        const next: StatoPagamento =
+          current === "unpaid"
+            ? "paid"
+            : current === "paid"
+              ? "suspended"
+              : "unpaid";
+
+        return {
+          ...prev,
+          [userId]: {
+            ...userRow,
+            [monthKey]: { ...(userRow[monthKey] ?? {}), stato: next },
+          },
+        };
+      });
+      return;
+    }
+
     setMatrix((prev) => {
       const userRow = prev[userId] ?? {};
       const current = userRow[monthKey]?.stato ?? "unpaid";
@@ -288,7 +311,7 @@ export default function PaymentsPage() {
 
       const body = {
         userId,
-        courseId: selectedCourseId === "ALL" ? null : selectedCourseId,
+        courseId: selectedCourseId,
         monthKey,
         status: stato,
       };

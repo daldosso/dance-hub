@@ -9,7 +9,7 @@ export async function upsertPayment(req: Request, res: Response) {
   try {
     const { userId, courseId, monthKey, status } = req.body as {
       userId?: number;
-      courseId?: number | null;
+      courseId?: number;
       monthKey?: string;
       status?: PaymentStatus;
     };
@@ -21,6 +21,17 @@ export async function upsertPayment(req: Request, res: Response) {
       });
     }
 
+    if (
+      courseId === undefined ||
+      courseId === null ||
+      Number.isNaN(Number(courseId))
+    ) {
+      return res.status(400).json({
+        error: "Parametri mancanti",
+        details: "courseId è obbligatorio",
+      });
+    }
+
     if (!["paid", "unpaid", "suspended"].includes(status)) {
       return res.status(400).json({
         error: "Stato non valido",
@@ -28,16 +39,13 @@ export async function upsertPayment(req: Request, res: Response) {
       });
     }
 
-    const courseIdValue =
-      typeof courseId === "number" && !Number.isNaN(courseId)
-        ? BigInt(courseId)
-        : (null as unknown as bigint);
+    const courseIdValue = BigInt(courseId);
 
     const record = await prisma.payments.upsert({
       where: {
         user_id_course_id_month_key: {
           user_id: BigInt(userId),
-          course_id: courseIdValue as any,
+          course_id: courseIdValue,
           month_key: monthKey,
         },
       },
@@ -47,7 +55,7 @@ export async function upsertPayment(req: Request, res: Response) {
       },
       create: {
         user_id: BigInt(userId),
-        course_id: courseIdValue as any,
+        course_id: courseIdValue,
         month_key: monthKey,
         status,
       },
