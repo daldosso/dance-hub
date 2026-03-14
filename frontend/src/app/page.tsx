@@ -70,6 +70,9 @@ export default function Home() {
   const [photoSuccess, setPhotoSuccess] = useState<string | null>(null);
   const [uploadTarget, setUploadTarget] = useState<Iscritto | null>(null);
   const mobileFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [previewIscritto, setPreviewIscritto] = useState<Iscritto | null>(null);
+  const longPressTimeoutRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const [corsi, setCorsi] = useState<Corso[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">(
@@ -647,7 +650,44 @@ export default function Home() {
                           className={`flex items-center justify-between gap-3 px-3 py-2 ${
                             isSelected ? "bg-sky-700/30" : ""
                           }`}
-                          onClick={() => handleEdit(i)}
+                          onClick={() => {
+                            if (longPressTriggeredRef.current) {
+                              longPressTriggeredRef.current = false;
+                              return;
+                            }
+                            handleEdit(i);
+                          }}
+                          onTouchStart={() => {
+                            longPressTriggeredRef.current = false;
+                            if (longPressTimeoutRef.current !== null) {
+                              window.clearTimeout(longPressTimeoutRef.current);
+                            }
+                            longPressTimeoutRef.current = window.setTimeout(
+                              () => {
+                                longPressTriggeredRef.current = true;
+                                setPreviewIscritto(i);
+                              },
+                              500,
+                            );
+                          }}
+                          onTouchEnd={() => {
+                            if (longPressTimeoutRef.current !== null) {
+                              window.clearTimeout(longPressTimeoutRef.current);
+                              longPressTimeoutRef.current = null;
+                            }
+                          }}
+                          onTouchMove={() => {
+                            if (longPressTimeoutRef.current !== null) {
+                              window.clearTimeout(longPressTimeoutRef.current);
+                              longPressTimeoutRef.current = null;
+                            }
+                          }}
+                          onTouchCancel={() => {
+                            if (longPressTimeoutRef.current !== null) {
+                              window.clearTimeout(longPressTimeoutRef.current);
+                              longPressTimeoutRef.current = null;
+                            }
+                          }}
                         >
                           <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-slate-200 ring-1 ring-slate-700/60">
@@ -1148,7 +1188,47 @@ export default function Home() {
               </div>
             </div>
           </section>
-        </main>
+      </main>
+
+      {/* Modale anteprima foto (mobile + desktop) */}
+      {previewIscritto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6"
+          onClick={() => setPreviewIscritto(null)}
+        >
+          <div
+            className="max-w-sm w-full rounded-2xl bg-slate-900/95 p-4 text-center shadow-xl ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 text-sm font-medium text-slate-100">
+              {previewIscritto.nome} {previewIscritto.cognome}
+            </div>
+            <div className="mx-auto mb-4 flex h-64 w-64 items-center justify-center overflow-hidden rounded-2xl bg-slate-800 text-4xl font-semibold text-slate-200 ring-1 ring-slate-700/60">
+              {previewIscritto.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewIscritto.photoUrl}
+                  alt={`${previewIscritto.nome} ${previewIscritto.cognome}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>
+                  {`${previewIscritto.nome?.[0] ?? ""}${
+                    previewIscritto.cognome?.[0] ?? ""
+                  }`.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-emerald-950 shadow hover:bg-emerald-400"
+              onClick={() => setPreviewIscritto(null)}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
