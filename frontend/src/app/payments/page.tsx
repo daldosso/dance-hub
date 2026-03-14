@@ -245,17 +245,26 @@ export default function PaymentsPage() {
   }, [iscritti, selectedCourseId]);
 
   function togglePagamento(userId: number, monthKey: string) {
-    let nextStatus: StatoPagamento;
-
     setMatrix((prev) => {
       const userRow = prev[userId] ?? {};
       const current = userRow[monthKey]?.stato ?? "unpaid";
-      nextStatus =
+      const nextStatus: StatoPagamento =
         current === "unpaid"
           ? "paid"
           : current === "paid"
             ? "suspended"
             : "unpaid";
+
+      // Upsert sul backend: con corso specifico una PUT, con "Tutti i corsi" una PUT per ogni corso dell'iscritto
+      if (selectedCourseId !== "ALL") {
+        void persistPayment(userId, monthKey, nextStatus, selectedCourseId);
+      } else {
+        const iscritto = iscritti.find((u) => u.id === userId);
+        const courseIds = iscritto?.courseIds ?? [];
+        for (const courseId of courseIds) {
+          void persistPayment(userId, monthKey, nextStatus, courseId);
+        }
+      }
 
       return {
         ...prev,
@@ -265,17 +274,6 @@ export default function PaymentsPage() {
         },
       };
     });
-
-    // Upsert sul backend: con corso specifico una PUT, con "Tutti i corsi" una PUT per ogni corso dell'iscritto
-    if (selectedCourseId !== "ALL") {
-      void persistPayment(userId, monthKey, nextStatus, selectedCourseId);
-    } else {
-      const iscritto = iscritti.find((u) => u.id === userId);
-      const courseIds = iscritto?.courseIds ?? [];
-      for (const courseId of courseIds) {
-        void persistPayment(userId, monthKey, nextStatus, courseId);
-      }
-    }
   }
 
   async function persistPayment(
