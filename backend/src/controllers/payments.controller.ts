@@ -5,6 +5,28 @@ const prisma = new PrismaClient();
 
 type PaymentStatus = "paid" | "unpaid" | "suspended";
 
+export async function listPayments(req: Request, res: Response) {
+  try {
+    const records = await prisma.payments.findMany();
+
+    return res.json({
+      payments: records.map((r) => ({
+        id: Number(r.id),
+        userId: Number(r.user_id),
+        courseId: r.course_id ? Number(r.course_id) : null,
+        monthKey: r.month_key,
+        status: r.status as PaymentStatus,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Errore nel caricamento pagamenti", error);
+    return res.status(500).json({
+      error: "Errore nel caricamento dei pagamenti",
+      details: error.message,
+    });
+  }
+}
+
 export async function upsertPayment(req: Request, res: Response) {
   try {
     const raw = (req.body || {}) as Record<string, unknown>;

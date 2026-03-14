@@ -151,21 +151,6 @@ export default function PaymentsPage() {
         });
 
         setIscritti(mapped);
-
-        // TODO: sostituire con dati reali quando sarà disponibile un endpoint pagamenti
-        // Per ora creiamo una matrice fittizia (es. ultimi 6 mesi, casuali ma deterministici)
-        const fakeMatrix: MatrixPagamenti = {};
-        for (const user of mapped) {
-          fakeMatrix[user.id] = {};
-          for (const mese of MESI) {
-            // pattern deterministico basato su id+monthKey
-            const hash = (user.id + mese.key.length) % 3;
-            const stato: StatoPagamento =
-              hash === 0 ? "unpaid" : hash === 1 ? "paid" : "suspended";
-            fakeMatrix[user.id][mese.key] = { stato };
-          }
-        }
-        setMatrix(fakeMatrix);
       } catch (err) {
         console.error(err);
         setError(
@@ -179,6 +164,61 @@ export default function PaymentsPage() {
     }
 
     void loadUsers();
+  }, []);
+
+  // Carica i pagamenti reali dal backend e popola la matrice
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!baseUrl) return;
+    if (typeof window === "undefined") return;
+
+    async function loadPayments() {
+      try {
+        const rawAuth = window.localStorage.getItem(AUTH_KEY);
+        if (!rawAuth) return;
+
+        let token: string | undefined;
+        try {
+          const parsed = JSON.parse(rawAuth) as { token?: string };
+          token = parsed.token;
+        } catch {
+          return;
+        }
+
+        if (!token) return;
+
+        const res = await fetch(`${baseUrl}/api/payments`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) return;
+
+        const raw = (await res.json()) as {
+          payments?: {
+            userId: number;
+            courseId: number | null;
+            monthKey: string;
+            status: StatoPagamento;
+          }[];
+        };
+
+        const list = raw.payments ?? [];
+        const next: MatrixPagamenti = {};
+
+        for (const p of list) {
+          if (!p || !p.userId || !p.monthKey || !p.status) continue;
+          if (!next[p.userId]) next[p.userId] = {};
+          next[p.userId][p.monthKey] = { stato: p.status };
+        }
+
+        setMatrix(next);
+      } catch (err) {
+        console.error("Errore nel caricamento pagamenti", err);
+      }
+    }
+
+    void loadPayments();
   }, []);
 
   // Carica elenco corsi per la combo in header (solo desktop)
@@ -343,8 +383,13 @@ export default function PaymentsPage() {
         <header className="mb-6 border-b border-white/10 pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight xl:text-4xl">
-                Pagamenti
+              <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight xl:text-4xl">
+                <span>Pagamenti</span>
+                {loading && (
+                  <span className="inline-flex h-4 w-4 items-center justify-center">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                  </span>
+                )}
               </h1>
               <p className="mt-1 text-sm text-slate-300">
                 Stato pagamenti iscritti per gli ultimi mesi
