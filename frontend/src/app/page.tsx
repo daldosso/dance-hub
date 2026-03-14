@@ -390,6 +390,24 @@ export default function Home() {
     setPhotoError(null);
     setPhotoSuccess(null);
 
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreview(previewUrl);
+
+    // Aggiorna subito l'avatar in lista (ottimismo UI)
+    setIscritti((prev) =>
+      prev.map((u) =>
+        u.id === user.id
+          ? {
+              ...u,
+              photoUrl: previewUrl,
+            }
+          : u,
+      ),
+    );
+    setSelezionato((prev) =>
+      prev && prev.id === user.id ? { ...prev, photoUrl: previewUrl } : prev,
+    );
+
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!baseUrl) {
       setPhotoError("NEXT_PUBLIC_API_URL non è configurata.");
@@ -697,11 +715,17 @@ export default function Home() {
                     ref={mobileFileInputRef}
                     type="file"
                     accept="image/*"
+                    capture="environment"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file || !uploadTarget) return;
                       void uploadPhotoForUser(uploadTarget, file);
+                      // reset target dopo l'upload
+                      setUploadTarget(null);
+                      if (mobileFileInputRef.current) {
+                        mobileFileInputRef.current.value = "";
+                      }
                     }}
                   />
                 </div>
