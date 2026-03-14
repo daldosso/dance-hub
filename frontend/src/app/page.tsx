@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -68,6 +68,8 @@ export default function Home() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoSuccess, setPhotoSuccess] = useState<string | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<Iscritto | null>(null);
+  const mobileFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [corsi, setCorsi] = useState<Corso[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">(
@@ -384,59 +386,47 @@ export default function Home() {
     setPhotoPreview(url);
   }
 
-  async function handlePhotoUpload() {
+  async function uploadPhotoForUser(user: Iscritto, file: File) {
+    setPhotoError(null);
+    setPhotoSuccess(null);
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!baseUrl) {
+      setPhotoError("NEXT_PUBLIC_API_URL non è configurata.");
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      setPhotoError("Upload disponibile solo dal browser.");
+      return;
+    }
+
+    const rawAuth = window.localStorage.getItem(AUTH_KEY);
+    if (!rawAuth) {
+      setPhotoError("Sessione non trovata. Esegui di nuovo il login.");
+      return;
+    }
+
+    let token: string | undefined;
     try {
-      setPhotoError(null);
-      setPhotoSuccess(null);
+      const parsed = JSON.parse(rawAuth) as { token?: string };
+      token = parsed.token;
+    } catch {
+      setPhotoError("Dati di sessione non validi. Esegui di nuovo il login.");
+      return;
+    }
 
-      if (!selezionato) {
-        setPhotoError("Seleziona prima un utente dalla griglia.");
-        return;
-      }
+    if (!token) {
+      setPhotoError("Token mancante. Esegui di nuovo il login.");
+      return;
+    }
 
-      if (!photoFile) {
-        setPhotoError("Seleziona prima un file immagine.");
-        return;
-      }
+    const formData = new FormData();
+    formData.append("profilePhoto", file);
+    formData.append("userId", String(user.id));
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!baseUrl) {
-        setPhotoError("NEXT_PUBLIC_API_URL non è configurata.");
-        return;
-      }
-
-      if (typeof window === "undefined") {
-        setPhotoError("Upload disponibile solo dal browser.");
-        return;
-      }
-
-      const rawAuth = window.localStorage.getItem(AUTH_KEY);
-      if (!rawAuth) {
-        setPhotoError("Sessione non trovata. Esegui di nuovo il login.");
-        return;
-      }
-
-      let token: string | undefined;
-      try {
-        const parsed = JSON.parse(rawAuth) as { token?: string };
-        token = parsed.token;
-      } catch {
-        setPhotoError("Dati di sessione non validi. Esegui di nuovo il login.");
-        return;
-      }
-
-      if (!token) {
-        setPhotoError("Token mancante. Esegui di nuovo il login.");
-        return;
-      }
-
-      const formData = new FormData();
-      // Il backend si aspetta il campo "profilePhoto" e lo userId
-      formData.append("profilePhoto", photoFile);
-      formData.append("userId", String(selezionato.id));
-
-      setPhotoUploading(true);
-
+    setPhotoUploading(true);
+    try {
       const res = await fetch(`${baseUrl}/api/users/profile-photo`, {
         method: "POST",
         headers: {
@@ -457,11 +447,34 @@ export default function Home() {
       }
 
       setPhotoSuccess("Foto caricata con successo.");
+      // refresh della lista utenti per aggiornare subito l'avatar (opzionale: qui è immediato solo se backend aggiorna)
+      // Nota: per semplicità non refetchiamo; l'avatar si aggiornerà al prossimo refresh/caricamento.
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function handlePhotoUpload() {
+    try {
+      setPhotoError(null);
+      setPhotoSuccess(null);
+
+      if (!selezionato) {
+        setPhotoError("Seleziona prima un utente dalla griglia.");
+        return;
+      }
+
+      if (!photoFile) {
+        setPhotoError("Seleziona prima un file immagine.");
+        return;
+      }
+
+      await uploadPhotoForUser(selezionato, photoFile);
     } catch (err) {
       console.error(err);
       setPhotoError("Errore imprevisto durante l'upload della foto.");
     } finally {
-      setPhotoUploading(false);
+      // gestito in uploadPhotoForUser
     }
   }
 
@@ -471,10 +484,35 @@ export default function Home() {
         <header className="mb-4 border-b border-white/10 pb-3 sm:mb-6 sm:pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-                Dance Hub
-              </h1>
-              <p className="mt-0.5 text-xs text-slate-300 sm:mt-1 sm:text-sm lg:text-base">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                  Dance Hub
+                </h1>
+                {loadingIscritti && (
+                  <span
+                    className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-400/60 border-t-transparent"
+                    aria-label="Caricamento iscritti"
+                  />
+                )}
+
+                {/* Statistiche compatte inline su mobile */}
+                <div className="ml-1 flex items-center gap-2 sm:hidden">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[11px] font-semibold text-emerald-200">
+                    <span className="text-[10px] font-bold tracking-wide text-emerald-300">
+                      TOT
+                    </span>
+                    <span>{stats.totali}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-1 text-[11px] font-semibold text-rose-100">
+                    <span className="text-[10px] font-bold tracking-wide text-rose-300">
+                      ARR
+                    </span>
+                    <span>{stats.arretrati}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-0.5 hidden text-xs text-slate-300 sm:block sm:mt-1 sm:text-sm lg:text-base">
                 Gestione iscritti scuola di ballo
               </p>
             </div>
@@ -501,7 +539,7 @@ export default function Home() {
                 </select>
               </div>
 
-              <div className="flex justify-end">
+              <div className="hidden justify-end sm:flex">
                 <Link
                   href="/payments"
                   className="inline-flex items-center justify-center rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-100 shadow-sm transition hover:bg-sky-500/20 sm:text-sm"
@@ -512,7 +550,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Statistiche: visibili solo da tablet in su per non occupare spazio su mobile */}
+          {/* Statistiche desktop/tablet */}
           <div className="mt-4 hidden gap-3 text-sm sm:grid sm:grid-cols-3">
             <div className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-emerald-300">
@@ -566,7 +604,112 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-950/60">
+            {/* Lista mobile compatta */}
+            <div className="sm:hidden">
+              {loadingIscritti ? (
+                <div className="rounded-lg border border-white/10 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400">
+                  Caricamento iscritti in corso…
+                </div>
+              ) : errorIscritti ? (
+                <div className="rounded-lg border border-white/10 bg-slate-950/60 px-4 py-6 text-center text-sm text-rose-300">
+                  {errorIscritti}
+                </div>
+              ) : iscrittiFiltrati.length === 0 ? (
+                <div className="rounded-lg border border-white/10 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400">
+                  Nessun iscritto trovato.
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-950/60">
+                  <ul className="divide-y divide-white/5">
+                    {iscrittiFiltrati.map((i) => {
+                      const isSelected = selezionato?.id === i.id;
+                      return (
+                        <li
+                          key={i.id}
+                          className={`flex items-center justify-between gap-3 px-3 py-2 ${
+                            isSelected ? "bg-sky-700/30" : ""
+                          }`}
+                          onClick={() => handleEdit(i)}
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-slate-200 ring-1 ring-slate-700/60">
+                              {i.photoUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={i.photoUrl}
+                                  alt={`${i.nome} ${i.cognome}`}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span>
+                                  {`${i.nome?.[0] ?? ""}${i.cognome?.[0] ?? ""}`.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium text-slate-100">
+                                {i.nome} {i.cognome}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-shrink-0 items-center gap-3">
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                i.stato === "Attivo"
+                                  ? "bg-emerald-400"
+                                  : i.stato === "Arretrato"
+                                    ? "bg-rose-500"
+                                    : "bg-amber-300"
+                              }`}
+                              title={i.stato}
+                            />
+
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10 disabled:opacity-60"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUploadTarget(i);
+                                setSelezionato(i);
+                                setPhotoFile(null);
+                                setPhotoPreview(null);
+                                setPhotoError(null);
+                                setPhotoSuccess(null);
+                                if (mobileFileInputRef.current) {
+                                  mobileFileInputRef.current.value = "";
+                                  mobileFileInputRef.current.click();
+                                }
+                              }}
+                              disabled={photoUploading}
+                              aria-label="Carica foto"
+                            >
+                              📷
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <input
+                    ref={mobileFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !uploadTarget) return;
+                      void uploadPhotoForUser(uploadTarget, file);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Tabella desktop */}
+            <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-slate-950/60 sm:block">
               <table className="min-w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-900/80 text-slate-300">
                   <tr>
