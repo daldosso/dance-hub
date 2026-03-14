@@ -1,3 +1,0 @@
-# Revert of the last commit
-
-This commit reverts the changes made in the previous commit: [SHA_OF_LAST_COMMIT]
