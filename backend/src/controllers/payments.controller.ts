@@ -7,44 +7,49 @@ type PaymentStatus = "paid" | "unpaid" | "suspended";
 
 export async function upsertPayment(req: Request, res: Response) {
   try {
-    const { userId, courseId, monthKey, status } = req.body as {
-      userId?: number;
-      courseId?: number;
-      monthKey?: string;
-      status?: PaymentStatus;
-    };
+    const raw = (req.body || {}) as Record<string, unknown>;
+    const userIdNum = Number(raw.userId);
+    const courseIdNum = Number(raw.courseId);
+    const monthKey =
+      typeof raw.monthKey === "string" ? raw.monthKey.trim() : "";
+    const status =
+      typeof raw.status === "string" ? raw.status.trim() : String(raw.status ?? "");
 
-    if (!userId || !monthKey || !status) {
+    if (Number.isNaN(userIdNum) || userIdNum < 1) {
       return res.status(400).json({
-        error: "Parametri mancanti",
-        details: "userId, monthKey e status sono obbligatori",
+        error: "Parametri non validi",
+        details: "userId deve essere un numero positivo",
+        received: { body: req.body },
       });
     }
-
-    if (
-      courseId === undefined ||
-      courseId === null ||
-      Number.isNaN(Number(courseId))
-    ) {
+    if (Number.isNaN(courseIdNum) || courseIdNum < 1) {
       return res.status(400).json({
-        error: "Parametri mancanti",
-        details: "courseId è obbligatorio",
+        error: "Parametri non validi",
+        details: "courseId deve essere un numero positivo",
+        received: { body: req.body },
       });
     }
-
+    if (!monthKey) {
+      return res.status(400).json({
+        error: "Parametri non validi",
+        details: "monthKey è obbligatorio (es. 2025-09)",
+        received: { body: req.body },
+      });
+    }
     if (!["paid", "unpaid", "suspended"].includes(status)) {
       return res.status(400).json({
         error: "Stato non valido",
-        details: "status deve essere uno tra paid, unpaid, suspended",
+        details: "status deve essere uno tra: paid, unpaid, suspended",
+        received: { status },
       });
     }
 
-    const courseIdValue = BigInt(courseId);
+    const courseIdValue = BigInt(courseIdNum);
 
     const record = await prisma.payments.upsert({
       where: {
         user_id_course_id_month_key: {
-          user_id: BigInt(userId),
+          user_id: BigInt(userIdNum),
           course_id: courseIdValue,
           month_key: monthKey,
         },
@@ -54,7 +59,7 @@ export async function upsertPayment(req: Request, res: Response) {
         updated_at: new Date(),
       },
       create: {
-        user_id: BigInt(userId),
+        user_id: BigInt(userIdNum),
         course_id: courseIdValue,
         month_key: monthKey,
         status,

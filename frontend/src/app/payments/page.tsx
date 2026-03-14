@@ -132,7 +132,9 @@ export default function PaymentsPage() {
 
           const courseIds =
             Array.isArray(u.courses) && u.courses.length > 0
-              ? u.courses.map((c) => Number(c.id))
+              ? u.courses
+                  .map((c) => Number(c.id))
+                  .filter((id) => Number.isFinite(id))
               : [];
 
           return {
@@ -199,7 +201,8 @@ export default function PaymentsPage() {
             .filter(
               (c) => typeof c.title === "string" && c.title.trim().length > 0,
             )
-            .map((c) => ({ id: Number(c.id), title: c.title.trim() }));
+            .map((c) => ({ id: Number(c.id), title: c.title.trim() }))
+            .filter((c) => Number.isFinite(c.id));
 
           setCorsi(mapped);
         }
@@ -242,33 +245,12 @@ export default function PaymentsPage() {
   }, [iscritti, selectedCourseId]);
 
   function togglePagamento(userId: number, monthKey: string) {
-    // Senza corso selezionato non persistiamo su backend
-    if (selectedCourseId === "ALL") {
-      setMatrix((prev) => {
-        const userRow = prev[userId] ?? {};
-        const current = userRow[monthKey]?.stato ?? "unpaid";
-        const next: StatoPagamento =
-          current === "unpaid"
-            ? "paid"
-            : current === "paid"
-              ? "suspended"
-              : "unpaid";
-
-        return {
-          ...prev,
-          [userId]: {
-            ...userRow,
-            [monthKey]: { ...(userRow[monthKey] ?? {}), stato: next },
-          },
-        };
-      });
-      return;
-    }
+    let nextStatus: StatoPagamento;
 
     setMatrix((prev) => {
       const userRow = prev[userId] ?? {};
       const current = userRow[monthKey]?.stato ?? "unpaid";
-      const next: StatoPagamento =
+      nextStatus =
         current === "unpaid"
           ? "paid"
           : current === "paid"
@@ -279,15 +261,29 @@ export default function PaymentsPage() {
         ...prev,
         [userId]: {
           ...userRow,
-          [monthKey]: { ...(userRow[monthKey] ?? {}), stato: next },
+          [monthKey]: { ...(userRow[monthKey] ?? {}), stato: nextStatus },
         },
       };
     });
 
-    void persistPayment(userId, monthKey);
+    // Upsert sul backend: con corso specifico una PUT, con "Tutti i corsi" una PUT per ogni corso dell'iscritto
+    if (selectedCourseId !== "ALL") {
+      void persistPayment(userId, monthKey, nextStatus, selectedCourseId);
+    } else {
+      const iscritto = iscritti.find((u) => u.id === userId);
+      const courseIds = iscritto?.courseIds ?? [];
+      for (const courseId of courseIds) {
+        void persistPayment(userId, monthKey, nextStatus, courseId);
+      }
+    }
   }
 
-  async function persistPayment(userId: number, monthKey: string) {
+  async function persistPayment(
+    userId: number,
+    monthKey: string,
+    status: StatoPagamento,
+    courseId: number,
+  ) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!baseUrl) return;
@@ -306,17 +302,14 @@ export default function PaymentsPage() {
 
       if (!token) return;
 
-      const userRow = matrix[userId];
-      const stato: StatoPagamento = userRow?.[monthKey]?.stato ?? "unpaid";
-
       const body = {
         userId,
-        courseId: selectedCourseId,
+        courseId,
         monthKey,
-        status: stato,
+        status,
       };
 
-      await fetch(`${baseUrl}/api/payments`, {
+      const res = await fetch(`${baseUrl}/api/payments`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -324,6 +317,11 @@ export default function PaymentsPage() {
         },
         body: JSON.stringify(body),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Errore salvataggio pagamento", res.status, err);
+      }
     } catch (err) {
       console.error("Errore nel salvataggio pagamento", err);
     }
