@@ -598,7 +598,9 @@ export default function Home() {
           <section className="flex-1 rounded-xl border border-white/10 bg-slate-900/60 p-3 shadow-lg backdrop-blur sm:p-4">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
-                <h2 className="text-lg font-semibold">Iscritti</h2>
+                <h2 className="hidden text-lg font-semibold sm:block">
+                  Iscritti
+                </h2>
                 <div className="flex flex-col gap-2 text-xs text-slate-300 sm:flex-row sm:items-center">
                   <input
                     type="text"
@@ -612,7 +614,7 @@ export default function Home() {
                     onChange={(e) =>
                       setFiltroStato(e.target.value as StatoIscrizione | "Tutti")
                     }
-                    className="w-full rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 sm:w-40"
+                    className="hidden rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 sm:block sm:w-40"
                   >
                     <option value="Tutti">Tutti gli stati</option>
                     {stati.map((s) => (
