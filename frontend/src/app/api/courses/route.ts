@@ -43,9 +43,11 @@ export async function GET() {
     }));
 
     return NextResponse.json({ courses: mapped });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Errore nel recupero corsi";
     return NextResponse.json(
-      { error: "Errore nel recupero corsi", details: error?.message },
+      { error: "Errore nel recupero corsi", details: message },
       { status: 500 },
     );
   }

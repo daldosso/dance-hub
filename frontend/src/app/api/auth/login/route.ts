@@ -61,10 +61,9 @@ export async function POST(req: NextRequest) {
         isOrganizer: user.is_organizer,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message ?? "Errore durante il login" },
-      { status: 401 },
-    );
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Errore durante il login";
+    return NextResponse.json({ error: message }, { status: 401 });
   }
 }

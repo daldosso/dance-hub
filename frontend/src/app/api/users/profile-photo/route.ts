@@ -82,9 +82,11 @@ export async function POST(req: NextRequest) {
       message: "Foto profilo aggiornata",
       profilePictureUrl: url,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Errore durante l'upload";
     return NextResponse.json(
-      { error: "Errore durante l'upload", details: error?.message },
+      { error: "Errore durante l'upload", details: message },
       { status: 500 },
     );
   }

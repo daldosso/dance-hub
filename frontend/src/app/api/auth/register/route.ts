@@ -61,10 +61,11 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message ?? "Errore durante la registrazione" },
-      { status: 400 },
-    );
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Errore durante la registrazione";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

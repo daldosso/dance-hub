@@ -24,11 +24,15 @@ export async function GET(req: NextRequest) {
         status: r.status as PaymentStatus,
       })),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Errore nel caricamento dei pagamenti";
     return NextResponse.json(
       {
         error: "Errore nel caricamento dei pagamenti",
-        details: error?.message,
+        details: message,
       },
       { status: 500 },
     );
@@ -120,11 +124,15 @@ export async function PUT(req: NextRequest) {
       monthKey: record.month_key,
       status: record.status,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Errore nel salvataggio del pagamento";
     return NextResponse.json(
       {
         error: "Errore nel salvataggio del pagamento",
-        details: error?.message,
+        details: message,
       },
       { status: 500 },
     );

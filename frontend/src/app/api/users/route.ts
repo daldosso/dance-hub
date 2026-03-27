@@ -56,9 +56,11 @@ export async function GET() {
     });
 
     return NextResponse.json({ users: mapped });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Errore nel recupero utenti";
     return NextResponse.json(
-      { error: "Errore nel recupero utenti", details: error?.message },
+      { error: "Errore nel recupero utenti", details: message },
       { status: 500 },
     );
   }
