@@ -19,12 +19,9 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!baseUrl) {
-        throw new Error("NEXT_PUBLIC_API_URL non è configurata");
-      }
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
-      const res = await fetch(`${baseUrl}/api/auth/login`, {
+      const res = await fetch(`${apiBase}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -135,4 +132,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

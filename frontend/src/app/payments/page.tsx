@@ -106,19 +106,14 @@ export default function PaymentsPage() {
 
   // Carica iscritti (utenti) dal backend
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) {
-      setError("NEXT_PUBLIC_API_URL non è configurata.");
-      setLoading(false);
-      return;
-    }
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
     async function loadUsers() {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${baseUrl}/api/users`);
+        const res = await fetch(`${apiBase}/api/users`);
         if (!res.ok) {
           throw new Error(`Errore ${res.status} nel caricamento utenti`);
         }
@@ -168,8 +163,7 @@ export default function PaymentsPage() {
 
   // Carica i pagamenti reali dal backend e popola la matrice
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) return;
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
     if (typeof window === "undefined") return;
 
     async function loadPayments() {
@@ -187,7 +181,7 @@ export default function PaymentsPage() {
 
         if (!token) return;
 
-        const res = await fetch(`${baseUrl}/api/payments`, {
+        const res = await fetch(`${apiBase}/api/payments`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -223,14 +217,11 @@ export default function PaymentsPage() {
 
   // Carica elenco corsi per la combo in header (solo desktop)
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) {
-      return;
-    }
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
     async function loadCourses() {
       try {
-        const res = await fetch(`${baseUrl}/api/courses`);
+        const res = await fetch(`${apiBase}/api/courses`);
         if (!res.ok) return;
 
         const raw = (await res.json()) as {
@@ -323,8 +314,7 @@ export default function PaymentsPage() {
     courseId: number,
   ) {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!baseUrl) return;
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
       if (typeof window === "undefined") return;
 
       const rawAuth = window.localStorage.getItem(AUTH_KEY);
@@ -347,7 +337,7 @@ export default function PaymentsPage() {
         status,
       };
 
-      const res = await fetch(`${baseUrl}/api/payments`, {
+      const res = await fetch(`${apiBase}/api/payments`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -531,4 +521,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-

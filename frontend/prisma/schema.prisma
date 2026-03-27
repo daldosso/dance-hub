@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model conversation_participants {
+  conversation_id BigInt
+  user_id         BigInt
+  joined_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  is_admin        Boolean?      @default(false)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([conversation_id, user_id])
+}
+
+model conversations {
+  id                        BigInt                      @id @default(autoincrement())
+  title                     String?                     @db.VarChar(150)
+  type                      String?                     @default("private") @db.VarChar(20)
+  event_id                  BigInt?
+  created_at                DateTime?                   @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamptz(6)
+  conversation_participants conversation_participants[]
+  events                    events?                     @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages                  messages[]
+}
+
+model course_enrollments {
+  id         BigInt    @id @default(autoincrement())
+  course_id  BigInt?
+  user_id    BigInt?
+  start_date DateTime  @db.Date
+  end_date   DateTime? @db.Date
+  status     String?   @default("active") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  courses    courses?  @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([course_id, user_id])
+}
+
+model courses {
+  id                 BigInt               @id @default(autoincrement())
+  title              String               @db.VarChar(150)
+  description        String?
+  style_id           Int?
+  teacher_id         BigInt?
+  venue_id           BigInt?
+  start_date         DateTime?            @db.Date
+  end_date           DateTime?            @db.Date
+  day_of_week        Int?
+  start_time         DateTime?            @db.Time(6)
+  end_time           DateTime?            @db.Time(6)
+  price_per_month    Decimal?             @db.Decimal(10, 2)
+  max_students       Int?
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  course_enrollments course_enrollments[]
+  dance_styles       dance_styles?        @relation(fields: [style_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teachers           teachers?            @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  venues             venues?              @relation(fields: [venue_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviews            reviews[]
+  transactions       transactions[]
+  videos             videos[]
+  payments           payments[]
+}
+
+model dance_styles {
+  id                Int                 @id @default(autoincrement())
+  name              String              @unique @db.VarChar(50)
+  courses           courses[]
+  user_dance_styles user_dance_styles[]
+  videos            videos[]
+}
+
+model event_participations {
+  id             BigInt        @id @default(autoincrement())
+  event_id       BigInt?
+  user_id        BigInt?
+  status         String?       @default("confirmed") @db.VarChar(20)
+  ticket_type    String?       @db.VarChar(50)
+  paid_amount    Decimal?      @default(0) @db.Decimal(10, 2)
+  payment_status String?       @default("pending") @db.VarChar(20)
+  checked_in     Boolean?      @default(false)
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  transaction_id BigInt?
+  events         events?       @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions   transactions? @relation(fields: [transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users          users?        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([event_id, user_id])
+}
+
+model events {
+  id                   BigInt                 @id @default(autoincrement())
+  title                String                 @db.VarChar(150)
+  description          String?
+  event_type           String                 @db.VarChar(50)
+  start_date           DateTime               @db.Timestamptz(6)
+  end_date             DateTime               @db.Timestamptz(6)
+  venue_id             BigInt?
+  organizer_id         BigInt
+  price                Decimal?               @default(0) @db.Decimal(10, 2)
+  currency             String?                @default("EUR") @db.VarChar(3)
+  max_participants     Int?
+  is_recurring         Boolean?               @default(false)
+  recurring_rule       String?
+  status               String?                @default("draft") @db.VarChar(20)
+  image_url            String?                @db.VarChar(512)
+  ticket_url           String?                @db.VarChar(512)
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  conversations        conversations[]
+  event_participations event_participations[]
+  users                users                  @relation(fields: [organizer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  venues               venues?                @relation(fields: [venue_id], references: [id], onUpdate: NoAction)
+  reviews              reviews[]
+  transactions         transactions[]
+  videos               videos[]
+}
+
+model follows {
+  follower_id                       BigInt
+  following_id                      BigInt
+  created_at                        DateTime? @default(now()) @db.Timestamptz(6)
+  users_follows_follower_idTousers  users     @relation("follows_follower_idTousers", fields: [follower_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_follows_following_idTousers users     @relation("follows_following_idTousers", fields: [following_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([follower_id, following_id])
+}
+
+model message_reads {
+  message_id BigInt
+  user_id    BigInt
+  read_at    DateTime? @default(now()) @db.Timestamptz(6)
+  messages   messages  @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([message_id, user_id])
+}
+
+model messages {
+  id              BigInt          @id @default(autoincrement())
+  conversation_id BigInt?
+  sender_id       BigInt
+  content         String
+  attachment_url  String?         @db.VarChar(512)
+  attachment_type String?         @db.VarChar(20)
+  is_read         Boolean?        @default(false)
+  created_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  message_reads   message_reads[]
+  conversations   conversations?  @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users           @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model notifications {
+  id         BigInt    @id @default(autoincrement())
+  user_id    BigInt
+  type       String    @db.VarChar(50)
+  title      String?   @db.VarChar(150)
+  content    String
+  link_url   String?   @db.VarChar(512)
+  is_read    Boolean?  @default(false)
+  priority   String?   @default("normal") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reviews {
+  id         BigInt    @id @default(autoincrement())
+  event_id   BigInt?
+  venue_id   BigInt?
+  course_id  BigInt?
+  user_id    BigInt?
+  rating     Int?      @db.SmallInt
+  comment    String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  courses    courses?  @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  events     events?   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  venues     venues?   @relation(fields: [venue_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model teachers {
+  id               BigInt    @id @default(autoincrement())
+  user_id          BigInt?   @unique
+  bio              String?
+  experience_years Int?
+  specialties      String[]
+  video_url        String?   @db.VarChar(512)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  courses          courses[]
+  users            users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model transactions {
+  id                   BigInt                 @id @default(autoincrement())
+  user_id              BigInt
+  event_id             BigInt?
+  course_id            BigInt?
+  amount               Decimal                @db.Decimal(10, 2)
+  currency             String?                @default("EUR") @db.VarChar(3)
+  payment_method       String?                @db.VarChar(50)
+  payment_provider_id  String?                @db.VarChar(255)
+  status               String?                @default("pending") @db.VarChar(20)
+  refunded_amount      Decimal?               @default(0) @db.Decimal(10, 2)
+  description          String?
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  event_participations event_participations[]
+  courses              courses?               @relation(fields: [course_id], references: [id], onUpdate: NoAction)
+  events               events?                @relation(fields: [event_id], references: [id], onUpdate: NoAction)
+  users                users                  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model user_dance_styles {
+  user_id      BigInt
+  style_id     Int
+  dance_styles dance_styles @relation(fields: [style_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, style_id])
+}
+
+model users {
+  id                                  BigInt                      @id @default(autoincrement())
+  email                               String                      @unique @db.VarChar(255)
+  password_hash                       String?                     @db.VarChar(255)
+  username                            String?                     @unique @db.VarChar(50)
+  full_name                           String?                     @db.VarChar(100)
+  birth_date                          DateTime?                   @db.Date
+  gender                              String?                     @db.VarChar(20)
+  bio                                 String?
+  profile_picture_url                 String?                     @db.VarChar(512)
+  city                                String?                     @db.VarChar(100)
+  country                             String?                     @db.VarChar(100)
+  dance_styles                        String[]
+  skill_level                         String?                     @db.VarChar(20)
+  is_teacher                          Boolean?                    @default(false)
+  is_organizer                        Boolean?                    @default(false)
+  created_at                          DateTime?                   @default(now()) @db.Timestamptz(6)
+  updated_at                          DateTime?                   @default(now()) @db.Timestamptz(6)
+  last_login                          DateTime?                   @db.Timestamptz(6)
+  is_active                           Boolean?                    @default(true)
+  birthday_reminders_enabled          Boolean?                    @default(true)
+  push_notifications_enabled          Boolean?                    @default(true)
+  email_notifications_enabled         Boolean?                    @default(true)
+  conversation_participants           conversation_participants[]
+  course_enrollments                  course_enrollments[]
+  event_participations                event_participations[]
+  events                              events[]
+  follows_follows_follower_idTousers  follows[]                   @relation("follows_follower_idTousers")
+  follows_follows_following_idTousers follows[]                   @relation("follows_following_idTousers")
+  message_reads                       message_reads[]
+  messages                            messages[]
+  notifications                       notifications[]
+  reviews                             reviews[]
+  teachers                            teachers?
+  transactions                        transactions[]
+  user_dance_styles                   user_dance_styles[]
+  venues                              venues[]
+  video_likes                         video_likes[]
+  videos                              videos[]
+  payments                            payments[]
+  @@map("users")
+}
+
+model venues {
+  id          BigInt    @id @default(autoincrement())
+  name        String    @db.VarChar(150)
+  address     String?   @db.VarChar(255)
+  city        String    @db.VarChar(100)
+  country     String    @db.VarChar(100)
+  latitude    Decimal?  @db.Decimal(9, 6)
+  longitude   Decimal?  @db.Decimal(9, 6)
+  description String?
+  website     String?   @db.VarChar(255)
+  phone       String?   @db.VarChar(50)
+  capacity    Int?
+  floor_type  String?   @db.VarChar(100)
+  image_url   String?   @db.VarChar(512)
+  created_by  BigInt?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  courses     courses[]
+  events      events[]
+  reviews     reviews[]
+  users       users?    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model video_likes {
+  video_id BigInt
+  user_id  BigInt
+  liked_at DateTime? @default(now()) @db.Timestamptz(6)
+  users    users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  videos   videos    @relation(fields: [video_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([video_id, user_id])
+}
+
+model videos {
+  id               BigInt        @id @default(autoincrement())
+  title            String        @db.VarChar(150)
+  description      String?
+  url              String        @db.VarChar(512)
+  thumbnail_url    String?       @db.VarChar(512)
+  duration_seconds Int?
+  dance_style_id   Int?
+  uploader_id      BigInt
+  event_id         BigInt?
+  course_id        BigInt?
+  visibility       String?       @default("public") @db.VarChar(20)
+  views_count      Int?          @default(0)
+  likes_count      Int?          @default(0)
+  tags             String[]
+  created_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  video_likes      video_likes[]
+  courses          courses?      @relation(fields: [course_id], references: [id], onUpdate: NoAction)
+  dance_styles     dance_styles? @relation(fields: [dance_style_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  events           events?       @relation(fields: [event_id], references: [id], onUpdate: NoAction)
+  users            users         @relation(fields: [uploader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model payments {
+  id        BigInt    @id @default(autoincrement())
+  user_id   BigInt
+  course_id BigInt?
+  month_key String    @db.VarChar(7) // "YYYY-MM"
+  status    String    @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  course courses? @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, course_id, month_key])
+}
+

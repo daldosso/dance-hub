@@ -166,12 +166,7 @@ export default function Home() {
 
   // Carica gli iscritti dal backend
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) {
-      setErrorIscritti("NEXT_PUBLIC_API_URL non è configurata.");
-      setLoadingIscritti(false);
-      return;
-    }
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
     async function loadUsers() {
       try {
@@ -191,7 +186,7 @@ export default function Home() {
           }
         }
 
-        const res = await fetch(`${baseUrl}/api/users`, {
+        const res = await fetch(`${apiBase}/api/users`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -286,14 +281,11 @@ export default function Home() {
 
   // Carica l'elenco corsi per la combo in header
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) {
-      return;
-    }
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
     async function loadCourses() {
       try {
-        const res = await fetch(`${baseUrl}/api/courses`);
+        const res = await fetch(`${apiBase}/api/courses`);
         if (!res.ok) return;
 
         const raw = (await res.json()) as { courses?: { id: number; title: string }[] };
@@ -411,11 +403,7 @@ export default function Home() {
       prev && prev.id === user.id ? { ...prev, photoUrl: previewUrl } : prev,
     );
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseUrl) {
-      setPhotoError("NEXT_PUBLIC_API_URL non è configurata.");
-      return;
-    }
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
 
     if (typeof window === "undefined") {
       setPhotoError("Upload disponibile solo dal browser.");
@@ -448,7 +436,7 @@ export default function Home() {
 
     setPhotoUploading(true);
     try {
-      const res = await fetch(`${baseUrl}/api/users/profile-photo`, {
+      const res = await fetch(`${apiBase}/api/users/profile-photo`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
