@@ -9,6 +9,8 @@ if (!JWT_SECRET) {
 
 export type AuthUser = { id: number; email: string; role: string };
 
+type DecodedJwt = { id?: number; email?: string; role?: string };
+
 export function getAuthUser(
   req: NextRequest,
 ):
@@ -24,8 +26,19 @@ export function getAuthUser(
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
-    return { ok: true, user: decoded };
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as DecodedJwt;
+    if (!decoded || !decoded.id || !decoded.email || !decoded.role) {
+      return { ok: false, status: 403, error: "Token non valido o scaduto" };
+    }
+
+    return {
+      ok: true,
+      user: {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+      },
+    };
   } catch {
     return { ok: false, status: 403, error: "Token non valido o scaduto" };
   }

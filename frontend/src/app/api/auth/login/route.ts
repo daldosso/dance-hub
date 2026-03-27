@@ -11,7 +11,7 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET ?? "";
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET non definito nelle variabili d'ambiente");
 }
