@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 type Section = {
   title: string;
-  subtitle?: string;
   items: VoteItem[];
 };
 
@@ -19,7 +18,6 @@ const STORAGE_KEY = "dance-hub-voto-scaletta-2026";
 const sections: Section[] = [
   {
     title: "Prima parte",
-    subtitle: "Apertura, gruppi e classi iniziali",
     items: [
       { number: 1, title: "SIGLA" },
       { number: 2, title: "LISCIO" },
@@ -41,8 +39,7 @@ const sections: Section[] = [
     ],
   },
   {
-    title: "Premiazioni a sorpresa",
-    subtitle: "Blocco centrale della serata",
+    title: "Premiazioni",
     items: [
       { number: 20, title: "SHINE BACHATA" },
       { number: 21, title: "SHINE SALSA" },
@@ -56,7 +53,6 @@ const sections: Section[] = [
   },
   {
     title: "Seconda parte",
-    subtitle: "Coppie, assoli e gruppi finali",
     items: [
       { number: 24, title: "CARAIBICO INTERMEDIO/AVANZATO BACHATA" },
       { number: 25, title: "CARAIBICO INTERMEDIO/AVANZATO SALSA" },
@@ -85,17 +81,13 @@ const sections: Section[] = [
 
 export function VotingBallot() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
-  const [search, setSearch] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [savedLabel, setSavedLabel] = useState<string | null>(null);
   const [ballotKey, setBallotKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const allItems = useMemo(
-    () => sections.flatMap((section) => section.items),
-    [],
-  );
+  const allItems = useMemo(() => sections.flatMap((section) => section.items), []);
 
   const selectedItems = useMemo(
     () =>
@@ -104,23 +96,6 @@ export function VotingBallot() {
         .filter((item): item is VoteItem => Boolean(item)),
     [allItems, selectedNumbers],
   );
-
-  const filteredSections = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) return sections;
-
-    return sections
-      .map((section) => ({
-        ...section,
-        items: section.items.filter(
-          (item) =>
-            item.title.toLowerCase().includes(query) ||
-            String(item.number).includes(query),
-        ),
-      }))
-      .filter((section) => section.items.length > 0);
-  }, [search]);
 
   useEffect(() => {
     try {
@@ -262,76 +237,19 @@ export function VotingBallot() {
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-5">
         <header className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100">
+          <div className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100">
               Voto pubblico
-            </div>
-            <div className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
-              Senza login
             </div>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-slate-950/45 p-5 shadow-2xl shadow-black/25 backdrop-blur">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-              Saggio 25 giugno 2026
-            </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
               Vota la scaletta
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
-              Seleziona fino a {MAX_SELECTIONS} numeri che ti piacciono di più.
-              Il voto viene salvato automaticamente su questo dispositivo.
-            </p>
-
-            <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-50">
-              Esclusi Tommy e Laura.
-            </div>
-          </div>
-
-          <label className="block rounded-[22px] border border-white/10 bg-slate-950/55 p-3 shadow-lg shadow-black/20 backdrop-blur">
-            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Cerca nella scaletta
-            </span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              type="search"
-              placeholder="Es. bachata, gruppo 2, giulia..."
-              className="w-full bg-transparent text-sm text-slate-50 outline-none placeholder:text-slate-500"
-            />
-          </label>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                Selezioni
-              </div>
-              <div className="mt-1 text-2xl font-semibold">
-                {selectedNumbers.length}/{MAX_SELECTIONS}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                Voci
-              </div>
-              <div className="mt-1 text-2xl font-semibold">
-                {allItems.length}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                Stato
-              </div>
-              <div className="mt-1 text-sm font-semibold text-emerald-200">
-                {hydrated ? "Pronto" : "Caricamento"}
-              </div>
-            </div>
           </div>
 
           {selectedItems.length > 0 && (
             <div className="rounded-[22px] border border-emerald-300/15 bg-emerald-400/10 p-3 backdrop-blur">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
-                Scelte attive
-              </div>
               <div className="flex flex-wrap gap-2">
                 {selectedItems.map((item) => (
                   <button
@@ -357,16 +275,9 @@ export function VotingBallot() {
               key={section.title}
               className="rounded-[28px] border border-white/10 bg-slate-950/40 p-4 shadow-xl shadow-black/20 backdrop-blur"
             >
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold text-white">
-                  {section.title}
-                </h2>
-                {section.subtitle && (
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    {section.subtitle}
-                  </p>
-                )}
-              </div>
+              <h2 className="mb-3 text-lg font-semibold text-white">
+                {section.title}
+              </h2>
 
               <div className="space-y-2">
                 {section.items.map((item) => {
@@ -396,9 +307,6 @@ export function VotingBallot() {
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium leading-5 text-white">
                           {item.title}
-                        </span>
-                        <span className="mt-1 block text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                          {active ? "Selezionato" : "Tocca per votare"}
                         </span>
                       </span>
 
@@ -447,8 +355,10 @@ export function VotingBallot() {
         </div>
 
         <div className="mx-auto mt-2 flex w-full max-w-md items-center justify-between text-[11px] text-slate-400">
-          <span>Voto salvato su questo telefono/browser e nel DB.</span>
-          <span>{savedLabel ? `Salvato il ${savedLabel}` : "Bozza automatica"}</span>
+          <span>{savedLabel ? `Salvato il ${savedLabel}` : "Bozza"}</span>
+          <span>
+            {hydrated ? `${selectedNumbers.length}/${MAX_SELECTIONS}` : "..." }
+          </span>
         </div>
         {saveError && (
           <div className="mx-auto mt-2 w-full max-w-md rounded-2xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
