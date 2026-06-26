@@ -85,6 +85,7 @@ export function VotingBallot() {
   const [ballotKey, setBallotKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showThanks, setShowThanks] = useState(false);
 
   const allItems = useMemo(() => sections.flatMap((section) => section.items), []);
   const filteredSections = sections;
@@ -135,6 +136,7 @@ export function VotingBallot() {
 
   function toggleSelection(number: number) {
     setSaveError(null);
+    setShowThanks(false);
 
     setSelectedNumbers((current) => {
       if (current.includes(number)) {
@@ -151,6 +153,7 @@ export function VotingBallot() {
 
   function clearSelection() {
     setSaveError(null);
+    setShowThanks(false);
     setSelectedNumbers([]);
   }
 
@@ -195,6 +198,7 @@ export function VotingBallot() {
           STORAGE_KEY,
           JSON.stringify({ selectedNumbers }),
         );
+        setShowThanks(true);
       } catch (error) {
         setSaveError(
           error instanceof Error
@@ -309,13 +313,36 @@ export function VotingBallot() {
           >
             {isSaving ? "Salvataggio..." : "Conferma voto"}
           </button>
-        </div>
-        {saveError && (
+      </div>
+      {saveError && (
           <div className="mx-auto mt-2 w-full max-w-md rounded-2xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
             {saveError}
           </div>
         )}
       </div>
+
+      {showThanks && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setShowThanks(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-[28px] border border-white/10 bg-slate-950 p-6 text-center shadow-2xl shadow-black/40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-semibold text-white">
+              Grazie per il voto
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowThanks(false)}
+              className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-4 text-sm font-semibold text-slate-950"
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

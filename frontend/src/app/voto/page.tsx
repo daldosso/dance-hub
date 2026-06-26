@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { VotingBallot } from "./VotingBallot";
 
 export const metadata: Metadata = {
-  title: "Voto scaletta saggio 2026",
+  title: "Saggio Latin Charm 25 Giugno 2026",
   description:
     "Pagina pubblica per votare la scaletta del saggio 2026, senza autenticazione.",
 };
