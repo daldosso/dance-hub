@@ -82,20 +82,12 @@ const sections: Section[] = [
 export function VotingBallot() {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [savedLabel, setSavedLabel] = useState<string | null>(null);
   const [ballotKey, setBallotKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const allItems = useMemo(() => sections.flatMap((section) => section.items), []);
-
-  const selectedItems = useMemo(
-    () =>
-      selectedNumbers
-        .map((number) => allItems.find((item) => item.number === number))
-        .filter((item): item is VoteItem => Boolean(item)),
-    [allItems, selectedNumbers],
-  );
+  const filteredSections = sections;
 
   useEffect(() => {
     try {
@@ -142,7 +134,6 @@ export function VotingBallot() {
   }, [hydrated, selectedNumbers]);
 
   function toggleSelection(number: number) {
-    setSavedLabel(null);
     setSaveError(null);
 
     setSelectedNumbers((current) => {
@@ -159,7 +150,6 @@ export function VotingBallot() {
   }
 
   function clearSelection() {
-    setSavedLabel(null);
     setSaveError(null);
     setSelectedNumbers([]);
   }
@@ -201,13 +191,6 @@ export function VotingBallot() {
           );
         }
 
-        const now = new Date();
-        const label = now.toLocaleString("it-IT", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-
-        setSavedLabel(label);
         window.localStorage.setItem(
           STORAGE_KEY,
           JSON.stringify({ selectedNumbers }),
@@ -236,37 +219,11 @@ export function VotingBallot() {
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-5">
         <header className="space-y-4">
-          <div className="flex items-center justify-between">
-          <div className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100">
-              Voto pubblico
-            </div>
-          </div>
-
           <div className="rounded-[28px] border border-white/10 bg-slate-950/45 p-5 shadow-2xl shadow-black/25 backdrop-blur">
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+            <h1 className="text-3xl font-semibold tracking-tight text-white">
               Vota la scaletta
             </h1>
           </div>
-
-          {selectedItems.length > 0 && (
-            <div className="rounded-[22px] border border-emerald-300/15 bg-emerald-400/10 p-3 backdrop-blur">
-              <div className="flex flex-wrap gap-2">
-                {selectedItems.map((item) => (
-                  <button
-                    key={item.number}
-                    type="button"
-                    onClick={() => toggleSelection(item.number)}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-slate-950/35 px-3 py-1.5 text-left text-xs font-medium text-emerald-50"
-                  >
-                    <span className="rounded-full bg-emerald-300/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-100">
-                      {item.number}
-                    </span>
-                    <span className="max-w-[16rem] truncate">{item.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </header>
 
         <section className="mt-5 space-y-4 pb-8">
@@ -352,13 +309,6 @@ export function VotingBallot() {
           >
             {isSaving ? "Salvataggio..." : "Conferma voto"}
           </button>
-        </div>
-
-        <div className="mx-auto mt-2 flex w-full max-w-md items-center justify-between text-[11px] text-slate-400">
-          <span>{savedLabel ? `Salvato il ${savedLabel}` : "Bozza"}</span>
-          <span>
-            {hydrated ? `${selectedNumbers.length}/${MAX_SELECTIONS}` : "..." }
-          </span>
         </div>
         {saveError && (
           <div className="mx-auto mt-2 w-full max-w-md rounded-2xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
