@@ -1,0 +1,461 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Section = {
+  title: string;
+  subtitle?: string;
+  items: VoteItem[];
+};
+
+type VoteItem = {
+  number: number;
+  title: string;
+};
+
+const MAX_SELECTIONS = 5;
+const STORAGE_KEY = "dance-hub-voto-scaletta-2026";
+
+const sections: Section[] = [
+  {
+    title: "Prima parte",
+    subtitle: "Apertura, gruppi e classi iniziali",
+    items: [
+      { number: 1, title: "SIGLA" },
+      { number: 2, title: "LISCIO" },
+      { number: 3, title: "CARAIBICO Base Bachata" },
+      { number: 4, title: "CARAIBICO Base Salsa" },
+      { number: 5, title: "BALLI DI GRUPPO 1" },
+      { number: 6, title: "KIZOMBA" },
+      { number: 7, title: "MARGARETH" },
+      { number: 8, title: "ZUMBA 1" },
+      { number: 10, title: "3 FRATELLINI" },
+      { number: 11, title: "CARAIBICO INTERMEDIO 1 BACHATA" },
+      { number: 12, title: "CARAIBICO INTERMEDIO 1 SALSA" },
+      { number: 13, title: "LADY CHARM" },
+      { number: 14, title: "MINI CHARM" },
+      { number: 15, title: "Zumba 2" },
+      { number: 16, title: "JANETTE" },
+      { number: 18, title: "DANZA MODERNA" },
+      { number: 19, title: "BALLI DI GRUPPO 2" },
+    ],
+  },
+  {
+    title: "Premiazioni a sorpresa",
+    subtitle: "Blocco centrale della serata",
+    items: [
+      { number: 20, title: "SHINE BACHATA" },
+      { number: 21, title: "SHINE SALSA" },
+      { number: 22, title: "SHINE MERENGUE" },
+      {
+        number: 23,
+        title:
+          "AGONISTI SUL PALCO IN ABITO DA BALLO (LISA, GIULIA, LETY, MICHAEL, DANIELE, JANY, GINNY, RAMONA, NEIDES, DANY E FABIO, ANDREA, SVEVA, GAIA, GIULIA G., MARICLA)",
+      },
+    ],
+  },
+  {
+    title: "Seconda parte",
+    subtitle: "Coppie, assoli e gruppi finali",
+    items: [
+      { number: 24, title: "CARAIBICO INTERMEDIO/AVANZATO BACHATA" },
+      { number: 25, title: "CARAIBICO INTERMEDIO/AVANZATO SALSA" },
+      { number: 26, title: "HEELS" },
+      { number: 27, title: "NICOLE E SVEVA" },
+      { number: 28, title: "SQUINTERNATI" },
+      { number: 29, title: "CREW CHARM" },
+      { number: 30, title: "RICCARDO E PAMELA" },
+      { number: 31, title: "BALLI DI GRUPPO 3" },
+      { number: 32, title: "DANIELE E MARICLA" },
+      { number: 33, title: "DUO BACHATA" },
+      { number: 34, title: "DUO MERENGUE" },
+      { number: 35, title: "ANNA E FRA" },
+      { number: 36, title: "CLAUDIO E STEFY" },
+      { number: 37, title: "COREOGRAFICO" },
+      { number: 38, title: "DANY E FABIO BACHATA" },
+      { number: 39, title: "DANY E FABIO MERENGUE" },
+      { number: 40, title: "LISA" },
+      { number: 41, title: "SUPERAVANZATO GRUPPO 1" },
+      { number: 42, title: "SUPERAVANZATO GRUPPO 2" },
+      { number: 43, title: "GIULIA" },
+      { number: 44, title: "MARAGARETH" },
+    ],
+  },
+];
+
+export function VotingBallot() {
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  const [savedLabel, setSavedLabel] = useState<string | null>(null);
+  const [ballotKey, setBallotKey] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const allItems = useMemo(
+    () => sections.flatMap((section) => section.items),
+    [],
+  );
+
+  const selectedItems = useMemo(
+    () =>
+      selectedNumbers
+        .map((number) => allItems.find((item) => item.number === number))
+        .filter((item): item is VoteItem => Boolean(item)),
+    [allItems, selectedNumbers],
+  );
+
+  const filteredSections = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return sections;
+
+    return sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(query) ||
+            String(item.number).includes(query),
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [search]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const rawBallotKey = window.localStorage.getItem("dance-hub-voto-key");
+
+      if (rawBallotKey && rawBallotKey.length >= 8) {
+        setBallotKey(rawBallotKey);
+      } else {
+        const nextBallotKey = crypto.randomUUID();
+        window.localStorage.setItem("dance-hub-voto-key", nextBallotKey);
+        setBallotKey(nextBallotKey);
+      }
+
+      if (!raw) {
+        setHydrated(true);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as { selectedNumbers?: unknown };
+      const next = Array.isArray(parsed.selectedNumbers)
+        ? parsed.selectedNumbers
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value))
+            .filter((value, index, array) => array.indexOf(value) === index)
+            .filter((value) => allItems.some((item) => item.number === value))
+        : [];
+
+      setSelectedNumbers(next.slice(0, MAX_SELECTIONS));
+    } catch {
+      setSelectedNumbers([]);
+    } finally {
+      setHydrated(true);
+    }
+  }, [allItems]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ selectedNumbers }),
+    );
+  }, [hydrated, selectedNumbers]);
+
+  function toggleSelection(number: number) {
+    setSavedLabel(null);
+    setSaveError(null);
+
+    setSelectedNumbers((current) => {
+      if (current.includes(number)) {
+        return current.filter((value) => value !== number);
+      }
+
+      if (current.length >= MAX_SELECTIONS) {
+        return current;
+      }
+
+      return [...current, number];
+    });
+  }
+
+  function clearSelection() {
+    setSavedLabel(null);
+    setSaveError(null);
+    setSelectedNumbers([]);
+  }
+
+  function confirmVote() {
+    async function persistVote() {
+      if (!ballotKey) {
+        setSaveError("Chiave voto non disponibile. Ricarica la pagina.");
+        return;
+      }
+
+      if (selectedNumbers.length === 0) {
+        setSaveError("Seleziona almeno una preferenza.");
+        return;
+      }
+
+      setIsSaving(true);
+      setSaveError(null);
+
+      try {
+        const res = await fetch("/api/votes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ballotKey,
+            selectedNumbers,
+          }),
+        });
+
+        const payload = (await res.json().catch(() => null)) as
+          | { error?: string; details?: string }
+          | null;
+
+        if (!res.ok) {
+          throw new Error(
+            payload?.details ?? payload?.error ?? "Errore nel salvataggio",
+          );
+        }
+
+        const now = new Date();
+        const label = now.toLocaleString("it-IT", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+
+        setSavedLabel(label);
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ selectedNumbers }),
+        );
+      } catch (error) {
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : "Errore imprevisto nel salvataggio del voto.",
+        );
+      } finally {
+        setIsSaving(false);
+      }
+    }
+
+    void persistVote();
+  }
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_34%),linear-gradient(180deg,_#09111f_0%,_#050814_100%)] text-slate-50">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-20 top-8 h-52 w-52 rounded-full bg-cyan-400/15 blur-3xl" />
+        <div className="absolute -right-20 top-36 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-5">
+        <header className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100">
+              Voto pubblico
+            </div>
+            <div className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+              Senza login
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-slate-950/45 p-5 shadow-2xl shadow-black/25 backdrop-blur">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+              Saggio 25 giugno 2026
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              Vota la scaletta
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Seleziona fino a {MAX_SELECTIONS} numeri che ti piacciono di più.
+              Il voto viene salvato automaticamente su questo dispositivo.
+            </p>
+
+            <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-50">
+              Esclusi Tommy e Laura.
+            </div>
+          </div>
+
+          <label className="block rounded-[22px] border border-white/10 bg-slate-950/55 p-3 shadow-lg shadow-black/20 backdrop-blur">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Cerca nella scaletta
+            </span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              type="search"
+              placeholder="Es. bachata, gruppo 2, giulia..."
+              className="w-full bg-transparent text-sm text-slate-50 outline-none placeholder:text-slate-500"
+            />
+          </label>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                Selezioni
+              </div>
+              <div className="mt-1 text-2xl font-semibold">
+                {selectedNumbers.length}/{MAX_SELECTIONS}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                Voci
+              </div>
+              <div className="mt-1 text-2xl font-semibold">
+                {allItems.length}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                Stato
+              </div>
+              <div className="mt-1 text-sm font-semibold text-emerald-200">
+                {hydrated ? "Pronto" : "Caricamento"}
+              </div>
+            </div>
+          </div>
+
+          {selectedItems.length > 0 && (
+            <div className="rounded-[22px] border border-emerald-300/15 bg-emerald-400/10 p-3 backdrop-blur">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
+                Scelte attive
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedItems.map((item) => (
+                  <button
+                    key={item.number}
+                    type="button"
+                    onClick={() => toggleSelection(item.number)}
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-slate-950/35 px-3 py-1.5 text-left text-xs font-medium text-emerald-50"
+                  >
+                    <span className="rounded-full bg-emerald-300/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-100">
+                      {item.number}
+                    </span>
+                    <span className="max-w-[16rem] truncate">{item.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </header>
+
+        <section className="mt-5 space-y-4 pb-8">
+          {filteredSections.map((section) => (
+            <div
+              key={section.title}
+              className="rounded-[28px] border border-white/10 bg-slate-950/40 p-4 shadow-xl shadow-black/20 backdrop-blur"
+            >
+              <div className="mb-3">
+                <h2 className="text-lg font-semibold text-white">
+                  {section.title}
+                </h2>
+                {section.subtitle && (
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    {section.subtitle}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {section.items.map((item) => {
+                  const active = selectedNumbers.includes(item.number);
+
+                  return (
+                    <button
+                      key={item.number}
+                      type="button"
+                      onClick={() => toggleSelection(item.number)}
+                      className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
+                        active
+                          ? "border-cyan-300/40 bg-cyan-400/15 shadow-lg shadow-cyan-500/10"
+                          : "border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                          active
+                            ? "bg-cyan-300 text-slate-950"
+                            : "bg-slate-800 text-slate-100"
+                        }`}
+                      >
+                        {item.number}
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium leading-5 text-white">
+                          {item.title}
+                        </span>
+                        <span className="mt-1 block text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                          {active ? "Selezionato" : "Tocca per votare"}
+                        </span>
+                      </span>
+
+                      <span
+                        className={`mt-1 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold ${
+                          active
+                            ? "bg-cyan-300 text-slate-950"
+                            : "bg-slate-800 text-slate-300"
+                        }`}
+                      >
+                        {active ? "OK" : "+"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {filteredSections.length === 0 && (
+            <div className="rounded-[28px] border border-white/10 bg-slate-950/40 p-6 text-center text-sm text-slate-300 backdrop-blur">
+              Nessun risultato per questa ricerca.
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-slate-950/85 px-4 py-3 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-md items-center gap-3">
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-100"
+          >
+            Svuota
+          </button>
+
+          <button
+            type="button"
+            onClick={confirmVote}
+            disabled={selectedNumbers.length === 0 || isSaving}
+            className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? "Salvataggio..." : "Conferma voto"}
+          </button>
+        </div>
+
+        <div className="mx-auto mt-2 flex w-full max-w-md items-center justify-between text-[11px] text-slate-400">
+          <span>Voto salvato su questo telefono/browser e nel DB.</span>
+          <span>{savedLabel ? `Salvato il ${savedLabel}` : "Bozza automatica"}</span>
+        </div>
+        {saveError && (
+          <div className="mx-auto mt-2 w-full max-w-md rounded-2xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-100">
+            {saveError}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

@@ -344,3 +344,12 @@ model payments {
   @@unique([user_id, course_id, month_key])
 }
 
+model vote_ballots {
+  id               BigInt    @id @default(autoincrement())
+  ballot_key       String    @unique @db.VarChar(64)
+  selected_numbers Int[]
+  selected_titles  String[]
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+}
+
