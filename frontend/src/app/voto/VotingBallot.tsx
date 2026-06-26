@@ -224,7 +224,10 @@ export function VotingBallot() {
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-5">
         <header className="space-y-4">
           <div className="rounded-[28px] border border-white/10 bg-slate-950/45 p-5 shadow-2xl shadow-black/25 backdrop-blur">
-            <h1 className="text-3xl font-semibold tracking-tight text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100/80">
+              Saggio Latin Charm 25 Giugno 2026
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
               Vota la scaletta
             </h1>
           </div>
