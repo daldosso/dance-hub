@@ -358,15 +358,50 @@ export default function Home() {
     );
   }
 
-  function extractValueNearLabel(lines: string[], labelRegexes: RegExp[]) {
+  function isCrediblePersonValue(value: string) {
+    const normalized = value
+      .replace(/[’']/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!normalized) return false;
+    if (/\d/.test(normalized)) return false;
+
+    const words = normalized.split(" ").filter(Boolean);
+    if (words.length === 0 || words.length > 4) return false;
+
+    const alphaWords = words.filter((word) => /[A-ZÀ-ÿ]/.test(word));
+    if (alphaWords.length === 0) return false;
+
+    if (alphaWords.some((word) => word.length === 1)) return false;
+
+    const lettersOnly = normalized.replace(/[^A-ZÀ-ÿ]/g, "");
+    if (lettersOnly.length < 3) return false;
+    if (!/[AEIOU]/.test(lettersOnly)) return false;
+
+    return true;
+  }
+
+  function extractValueNearLabel(
+    lines: string[],
+    labelRegexes: RegExp[],
+    validator?: (value: string) => boolean,
+  ) {
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       const matchedLabel = labelRegexes.find((regex) => regex.test(line));
 
       if (!matchedLabel) continue;
 
-      const inlineValue = line.replace(matchedLabel, "").replace(/^[\s:.-]+/, "").trim();
-      if (inlineValue && !isLikelyLabel(inlineValue)) {
+      const inlineValue = line
+        .replace(matchedLabel, "")
+        .replace(/^[\s:.-]+/, "")
+        .trim();
+      if (
+        inlineValue &&
+        !isLikelyLabel(inlineValue) &&
+        (!validator || validator(inlineValue))
+      ) {
         return inlineValue;
       }
 
@@ -374,6 +409,7 @@ export default function Home() {
         const candidate = lines[index + offset];
         if (!candidate) continue;
         if (isLikelyLabel(candidate)) continue;
+        if (validator && !validator(candidate)) continue;
         return candidate;
       }
     }
@@ -410,12 +446,12 @@ export default function Home() {
     const compactText = lines.join(" ");
 
     const nome =
-      extractValueNearLabel(lines, [/\bNOME\b/]) ??
-      extractValueNearLabel(lines, [/\bNAME\b/]) ??
+      extractValueNearLabel(lines, [/\bNOME\b/], isCrediblePersonValue) ??
+      extractValueNearLabel(lines, [/\bNAME\b/], isCrediblePersonValue) ??
       "";
     const cognome =
-      extractValueNearLabel(lines, [/\bCOGNOME\b/]) ??
-      extractValueNearLabel(lines, [/\bSURNAME\b/]) ??
+      extractValueNearLabel(lines, [/\bCOGNOME\b/], isCrediblePersonValue) ??
+      extractValueNearLabel(lines, [/\bSURNAME\b/], isCrediblePersonValue) ??
       "";
     const luogoNascita =
       extractValueNearLabel(lines, [/\bLUOGO DI NASCITA\b/, /\bNATO A\b/, /\bNATA A\b/]) ??
