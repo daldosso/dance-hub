@@ -336,20 +336,20 @@ export default function Home() {
     void loadCourses();
   }, []);
 
-  function normalizeOcrLine(line: string) {
-    return line
-      .replace(/\u00A0/g, " ")
-      .replace(/[^A-Z0-9À-ÿ\s:./-]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
   function normalizeOcrText(text: string) {
     return text
       .replace(/\r/g, "\n")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase();
+  }
+
+  function normalizeOcrLine(line: string) {
+    return line
+      .replace(/\u00A0/g, " ")
+      .replace(/[^A-Z0-9À-ÿ\s:./'-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function isLikelyLabel(line: string) {
@@ -361,11 +361,37 @@ export default function Home() {
   function stripDocumentLabels(value: string) {
     return value
       .replace(
-        /\b(COGNOME|SURNAME|NOME|NAME|LUOGO|PLACE|DATA|DATE|NASCITA|BIRTH|SESSO|SEX|CITTADINANZA|NATIONALITY|EMISSIONE|ISSUING|SCADENZA|EXPIRY|FIRMA|SIGNATURE|STATURA|HEIGHT|DOCUMENTO|DOC\.?|CODICE|FISCALE)\b/g,
+        /\b(COGNOME|SURNAME|NOME|NAME|LUOGO|PLACE|DATA|DATE|NASCITA|BIRTH|SESSO|SEX|CITTADINANZA|NATIONALITY|EMISSIONE|ISSUING|SCADENZA|EXPIRY|FIRMA|SIGNATURE|STATURA|HEIGHT|DOCUMENTO|DOC\.?|CODICE|FISCALE|IDENTITY|CARD|CARTA|DI|DEL|DELLA|DELL')\b/g,
         " ",
       )
+      .replace(/[\/|]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  function collectOcrLines(page: { blocks?: any[] | null }) {
+    const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+    const lines = blocks
+      .flatMap((block) =>
+        Array.isArray(block.paragraphs)
+          ? block.paragraphs.flatMap((paragraph: any) =>
+              Array.isArray(paragraph.lines) ? paragraph.lines : [],
+            )
+          : [],
+      )
+      .filter((line) => typeof line?.text === "string" && line.text.trim().length > 0)
+      .sort((a, b) => {
+        const aY = typeof a?.bbox?.y0 === "number" ? a.bbox.y0 : 0;
+        const bY = typeof b?.bbox?.y0 === "number" ? b.bbox.y0 : 0;
+        const yDelta = aY - bY;
+        if (Math.abs(yDelta) > 12) return yDelta;
+
+        const aX = typeof a?.bbox?.x0 === "number" ? a.bbox.x0 : 0;
+        const bX = typeof b?.bbox?.x0 === "number" ? b.bbox.x0 : 0;
+        return aX - bX;
+      });
+
+    return lines;
   }
 
   function isCrediblePersonValue(value: string) {
@@ -392,66 +418,51 @@ export default function Home() {
     return true;
   }
 
-  function extractValueNearLabel(
-    lines: string[],
+  function extractLineAfterLabel(
+    lines: any[],
     labelRegexes: RegExp[],
     validator?: (value: string) => boolean,
+    stopRegexes: RegExp[] = [],
   ) {
     for (let index = 0; index < lines.length; index += 1) {
-      const line = lines[index];
-      const matchedLabel = labelRegexes.find((regex) => regex.test(line));
+      const line = normalizeOcrLine(lines[index].text ?? "");
+      if (!labelRegexes.some((regex) => regex.test(line))) continue;
 
-      if (!matchedLabel) continue;
-
-      const inlineValue = line
-        .replace(matchedLabel, "")
-        .replace(/^[\s:.-]+/, "")
-        .trim();
-
-      const cleanedInlineValue = stripDocumentLabels(inlineValue);
+      const inlineValue = stripDocumentLabels(line);
       if (
-        cleanedInlineValue &&
-        !isLikelyLabel(cleanedInlineValue) &&
-        (!validator || validator(cleanedInlineValue))
+        inlineValue &&
+        !isLikelyLabel(inlineValue) &&
+        (!validator || validator(inlineValue))
       ) {
-        return cleanedInlineValue;
+        return inlineValue;
       }
 
-      for (let offset = 1; offset <= 3; offset += 1) {
-        const candidate = lines[index + offset];
+      const baseY = typeof lines[index]?.bbox?.y1 === "number" ? lines[index].bbox.y1 : 0;
+      const baseX = typeof lines[index]?.bbox?.x0 === "number" ? lines[index].bbox.x0 : 0;
+
+      for (let offset = 1; offset <= 4; offset += 1) {
+        const candidateLine = lines[index + offset];
+        if (!candidateLine) continue;
+
+        const candidate = stripDocumentLabels(
+          normalizeOcrLine(candidateLine.text ?? ""),
+        );
         if (!candidate) continue;
-        const cleanedCandidate = stripDocumentLabels(candidate);
-        if (!cleanedCandidate) continue;
-        if (isLikelyLabel(cleanedCandidate)) continue;
-        if (validator && !validator(cleanedCandidate)) continue;
-        return cleanedCandidate;
+        if (stopRegexes.some((regex) => regex.test(candidate))) break;
+
+        const candidateY = typeof candidateLine?.bbox?.y0 === "number" ? candidateLine.bbox.y0 : 0;
+        if (candidateY - baseY > 120) break;
+
+        const candidateX = typeof candidateLine?.bbox?.x0 === "number" ? candidateLine.bbox.x0 : 0;
+        if (Math.abs(candidateX - baseX) > 320) continue;
+
+        if (isLikelyLabel(candidate)) continue;
+        if (validator && !validator(candidate)) continue;
+        return candidate;
       }
     }
 
     return null;
-  }
-
-  function extractCompactField(
-    text: string,
-    pattern: RegExp,
-    validator?: (value: string) => boolean,
-  ) {
-    const match = text.match(pattern);
-    if (!match) return null;
-
-    const value = match[1]
-      .replace(/\s+/g, " ")
-      .replace(/[’']/g, "'")
-      .replace(/^[\s:.-]+/, "")
-      .trim();
-
-    if (!value) return null;
-
-    const cleanedValue = stripDocumentLabels(value);
-    if (!cleanedValue) return null;
-    if (validator && !validator(cleanedValue)) return null;
-
-    return cleanedValue;
   }
 
   function formatDateForInput(rawDate: string | null) {
@@ -502,48 +513,47 @@ export default function Home() {
         pixels[index] * 0.299 +
         pixels[index + 1] * 0.587 +
         pixels[index + 2] * 0.114;
-      const contrasted = Math.max(
-        0,
-        Math.min(255, (gray - 128) * 1.45 + 128),
-      );
-      pixels[index] = contrasted;
-      pixels[index + 1] = contrasted;
-      pixels[index + 2] = contrasted;
+      pixels[index] = gray;
+      pixels[index + 1] = gray;
+      pixels[index + 2] = gray;
     }
 
     context.putImageData(imageData, 0, 0);
     return canvas;
   }
 
-  function extractIdentityDocumentData(text: string) {
-    const normalizedText = normalizeOcrText(text);
-    const lines = normalizedText
-      .split("\n")
-      .map(normalizeOcrLine)
-      .filter(Boolean);
-
-    const compactText = lines.join(" ");
+  function extractIdentityDocumentData(page: { text: string; blocks?: any[] | null }) {
+    const normalizedText = normalizeOcrText(page.text ?? "");
+    const ocrLines = collectOcrLines(page);
+    const lines =
+      ocrLines.length > 0
+        ? ocrLines
+        : normalizedText
+            .split("\n")
+            .map((line) => ({
+              text: normalizeOcrLine(line),
+              confidence: 0,
+              bbox: { x0: 0, y0: 0, x1: 0, y1: 0 },
+            }))
+            .filter((line) => line.text.length > 0);
 
     const nome =
-      extractValueNearLabel(lines, [/\bNOME\b/], isCrediblePersonValue) ??
-      extractCompactField(
-        compactText,
-        /(?:\bNOME\b(?:\s*\/\s*\bNAME\b|\s+\bNAME\b)?|\bNAME\b)\s*[:.\-]?\s*([A-ZÀ-ÿ' ]{2,60}?)(?=\s+(?:\bLUOGO\b|\bPLACE\b|\bCOGNOME\b|\bSURNAME\b|\bSESSO\b|\bSEX\b|\bCITTADINANZA\b|\bNATIONALITY\b|\bEMISSIONE\b|\bISSUING\b|\bSCADENZA\b|\bEXPIRY\b|\bFIRMA\b|\bSIGNATURE\b)|$)/,
+      extractLineAfterLabel(
+        lines,
+        [/\bNOME\b/, /\bNAME\b/],
         isCrediblePersonValue,
-      ) ??
-      extractValueNearLabel(lines, [/\bNAME\b/], isCrediblePersonValue) ??
-      "";
+        [/\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/, /\bCITTADINANZA\b/, /\bNATIONALITY\b/],
+      ) ?? "";
     const cognome =
-      extractValueNearLabel(lines, [/\bCOGNOME\b/], isCrediblePersonValue) ??
-      extractCompactField(
-        compactText,
-        /(?:\bCOGNOME\b(?:\s*\/\s*\bSURNAME\b|\s+\bSURNAME\b)?|\bSURNAME\b)\s*[:.\-]?\s*([A-ZÀ-ÿ' ]{2,60}?)(?=\s+(?:\bNOME\b|\bNAME\b|\bLUOGO\b|\bPLACE\b|\bSESSO\b|\bSEX\b|\bCITTADINANZA\b|\bNATIONALITY\b|\bEMISSIONE\b|\bISSUING\b|\bSCADENZA\b|\bEXPIRY\b|\bFIRMA\b|\bSIGNATURE\b)|$)/,
+      extractLineAfterLabel(
+        lines,
+        [/\bCOGNOME\b/, /\bSURNAME\b/],
         isCrediblePersonValue,
-      ) ??
-      extractValueNearLabel(lines, [/\bSURNAME\b/], isCrediblePersonValue) ??
-      "";
-    const birthPlaceAndDate =
-      extractValueNearLabel(
+        [/\bNOME\b/, /\bNAME\b/, /\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/],
+      ) ?? "";
+
+    const birthLine =
+      extractLineAfterLabel(
         lines,
         [
           /\bLUOGO E DATA DI NASCITA\b/,
@@ -552,30 +562,38 @@ export default function Home() {
           /\bNATO A\b/,
           /\bNATA A\b/,
         ],
+        undefined,
+        [/\bSESSO\b/, /\bSEX\b/, /\bCITTADINANZA\b/, /\bNATIONALITY\b/],
       ) ?? "";
     const luogoNascita =
-      stripDocumentLabels(
-        birthPlaceAndDate
-          .replace(/\b\d{2}[./-]\d{2}[./-]\d{2,4}\b.*/, "")
-          .replace(/\b(?:ITALIANA|ITALIANO|ITALIANA)\b/g, " "),
-      ) || "";
-    const sessoCandidate =
-      extractValueNearLabel(lines, [/\bSESSO\b/, /\bSEX\b/]) ?? "";
-    const sessoMatch = stripDocumentLabels(sessoCandidate).match(/\b(M|F|X)\b/);
-    const sesso = sessoMatch?.[1] ?? "";
+      stripDocumentLabels(birthLine)
+        .replace(/\b\d{2}[./-]\d{2}[./-]\d{2,4}\b.*/, "")
+        .replace(/\b(?:ITALIANA|ITALIANO)\b/g, " ")
+        .trim();
+
+    const sessoLine =
+      extractLineAfterLabel(lines, [/\bSESSO\b/, /\bSEX\b/]) ?? "";
+    const sesso =
+      stripDocumentLabels(sessoLine).match(/\b(M|F|X)\b/)?.[1] ?? "";
+
     const numeroDocumento =
-      extractValueNearLabel(lines, [/\bDOCUMENTO\b/, /\bDOC\.?\b/]) ?? "";
-    const dataNascitaMatch = compactText.match(
+      stripDocumentLabels(
+        extractLineAfterLabel(lines, [/\bDOCUMENTO\b/, /\bDOC\.?\b/]) ?? "",
+      );
+
+    const dataNascitaMatch = normalizedText.match(
       /\b(\d{2}[./-]\d{2}[./-]\d{2,4})\b/,
     );
     const dataNascita = formatDateForInput(dataNascitaMatch?.[1] ?? null);
-    const codiceFiscaleMatch = compactText.match(
-      /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\d{3}[A-Z]\b/,
+
+    const codiceFiscaleMatch = normalizedText.match(
+      /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/,
     );
     const codiceFiscale =
-      extractValueNearLabel(lines, [/\bCODICE FISCALE\b/, /\bFISCALE\b/]) ??
       codiceFiscaleMatch?.[0] ??
-      "";
+      stripDocumentLabels(
+        extractLineAfterLabel(lines, [/\bCODICE FISCALE\b/, /\bFISCALE\b/]) ?? "",
+      );
 
     return {
       nome,
@@ -618,6 +636,7 @@ export default function Home() {
 
     try {
       const { createWorker } = await import("tesseract.js");
+      const { PSM } = await import("tesseract.js");
       const worker = await createWorker("ita", 1, {
         logger: (message) => {
           if (typeof message.progress === "number") {
@@ -628,10 +647,16 @@ export default function Home() {
 
       try {
         const preparedDocument = await prepareDocumentForOcr(documentScanFile);
-        const result = await worker.recognize(preparedDocument, {
-          rotateAuto: true,
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+          preserve_interword_spaces: "1",
         });
-        const extracted = extractIdentityDocumentData(result.data.text ?? "");
+        const result = await worker.recognize(
+          preparedDocument,
+          { rotateAuto: true },
+          { text: true, blocks: true },
+        );
+        const extracted = extractIdentityDocumentData(result.data);
         applyIdentityDocumentData(extracted);
 
         const filledFields = [
