@@ -104,6 +104,51 @@ export default function PaymentsPage() {
     }
   }, [router]);
 
+  // Parsing intelligente per nomi e cognomi italiani
+  function parseItalianFullName(fullName: string): { nome: string; cognome: string } {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    
+    if (parts.length === 0) {
+      return { nome: "", cognome: "" };
+    }
+
+    if (parts.length === 1) {
+      return { nome: parts[0], cognome: "" };
+    }
+
+    // Prefissi cognominali italiani comuni
+    const cognomePrefixes = [
+      "DA", "DAL", "DELLA", "DELL", "DI", "D", "DEL", "DE", "DEI",
+      "LO", "LA", "LE", "AN", "VAN", "VON", "EL", "LI"
+    ];
+
+    // Prova a identificare il cognome cercando i prefissi
+    for (let i = 1; i < parts.length; i++) {
+      const potentialPrefix = parts[i].toUpperCase();
+      if (cognomePrefixes.includes(potentialPrefix)) {
+        // Trovato un prefisso: nome è prima, cognome è da i in poi
+        return {
+          nome: parts.slice(0, i).join(" "),
+          cognome: parts.slice(i).join(" ")
+        };
+      }
+    }
+
+    // Se non ci sono prefissi, usa euristica: prendi il primo come nome, il resto come cognome
+    // A meno che il nome sia una sola lettera (iniziale) e ci siano almeno 2 altre parti
+    if (parts[0].length === 1 && parts.length > 2) {
+      return {
+        nome: parts.slice(0, 2).join(" "),
+        cognome: parts.slice(2).join(" ")
+      };
+    }
+
+    return {
+      nome: parts[0],
+      cognome: parts.slice(1).join(" ")
+    };
+  }
+
   // Carica iscritti (utenti) dal backend
   useEffect(() => {
     const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
@@ -123,7 +168,7 @@ export default function PaymentsPage() {
 
         const mapped: Iscritto[] = users.map((u, index) => {
           const fullName = u.fullName ?? "";
-          const [nome, ...rest] = fullName.split(" ");
+          const { nome, cognome } = parseItalianFullName(fullName);
 
           const courseIds =
             Array.isArray(u.courses) && u.courses.length > 0
@@ -135,7 +180,7 @@ export default function PaymentsPage() {
           return {
             id: typeof u.id === "number" ? u.id : index + 1,
             nome: nome || "N/D",
-            cognome: rest.join(" "),
+            cognome: cognome || "N/D",
             email: u.email ?? "",
             photoUrl:
               typeof u.profilePictureUrl === "string"

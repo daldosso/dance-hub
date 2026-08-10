@@ -296,7 +296,7 @@ export default function Home() {
 
         const mapped: Iscritto[] = users.map((u, index) => {
           const fullName: string = u.fullName ?? "";
-          const [nomeFromName, ...restCognome] = fullName.split(" ");
+          const { nome: nomeFromName, cognome: cognomeFromName } = parseItalianFullName(fullName);
 
           const skill: string | null =
             typeof u.skillLevel === "string" ? u.skillLevel : null;
@@ -332,7 +332,7 @@ export default function Home() {
           return {
             id: typeof u.id === "number" ? u.id : index + 1,
             nome: nomeFromName || "N/D",
-            cognome: restCognome.length ? restCognome.join(" ") : "N/D",
+            cognome: cognomeFromName || "N/D",
             email: typeof u.email === "string" ? u.email : "",
             telefono: "",
             corso,
@@ -402,6 +402,51 @@ export default function Home() {
       .replace(/[^A-Z0-9À-ÿ\s:./'<>-]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  // Parsing intelligente per nomi e cognomi italiani
+  function parseItalianFullName(fullName: string): { nome: string; cognome: string } {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    
+    if (parts.length === 0) {
+      return { nome: "", cognome: "" };
+    }
+
+    if (parts.length === 1) {
+      return { nome: parts[0], cognome: "" };
+    }
+
+    // Prefissi cognominali italiani comuni
+    const cognomePrefixes = [
+      "DA", "DAL", "DELLA", "DELL", "DI", "D", "DEL", "DE", "DEI",
+      "LO", "LA", "LE", "AN", "VAN", "VON", "EL", "LI"
+    ];
+
+    // Prova a identificare il cognome cercando i prefissi
+    for (let i = 1; i < parts.length; i++) {
+      const potentialPrefix = parts[i].toUpperCase();
+      if (cognomePrefixes.includes(potentialPrefix)) {
+        // Trovato un prefisso: nome è prima, cognome è da i in poi
+        return {
+          nome: parts.slice(0, i).join(" "),
+          cognome: parts.slice(i).join(" ")
+        };
+      }
+    }
+
+    // Se non ci sono prefissi, usa euristica: prendi il primo come nome, il resto come cognome
+    // A meno che il nome sia una sola lettera (iniziale) e ci siano almeno 2 altre parti
+    if (parts[0].length === 1 && parts.length > 2) {
+      return {
+        nome: parts.slice(0, 2).join(" "),
+        cognome: parts.slice(2).join(" ")
+      };
+    }
+
+    return {
+      nome: parts[0],
+      cognome: parts.slice(1).join(" ")
+    };
   }
 
   function isLikelyLabel(line: string) {
@@ -570,8 +615,8 @@ export default function Home() {
 
   async function prepareDocumentForOcr(file: File) {
     const bitmap = await createImageBitmap(file);
-    const maxDimension = 2000;
-    const scale = Math.min(2, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const maxDimension = 2400;
+    const scale = Math.min(3, maxDimension / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
 
@@ -591,7 +636,7 @@ export default function Home() {
     const imageData = context.getImageData(0, 0, width, height);
     const pixels = imageData.data;
 
-    // Aumenta contrasto e converte in grigio per aiutare Tesseract sui documenti stampati.
+    // 1. Converti a scala di grigi
     for (let index = 0; index < pixels.length; index += 4) {
       const gray =
         pixels[index] * 0.299 +
@@ -600,6 +645,65 @@ export default function Home() {
       pixels[index] = gray;
       pixels[index + 1] = gray;
       pixels[index + 2] = gray;
+    }
+
+    // 2. Applica equalizazione istogramma locale (CLAHE-like)
+    const blockSize = 32;
+    for (let by = 0; by < height; by += blockSize) {
+      for (let bx = 0; bx < width; bx += blockSize) {
+        const endY = Math.min(by + blockSize, height);
+        const endX = Math.min(bx + blockSize, width);
+        const histogram = new Uint32Array(256);
+
+        // Calcola istogramma del blocco
+        for (let y = by; y < endY; y++) {
+          for (let x = bx; x < endX; x++) {
+            const idx = (y * width + x) * 4;
+            const grayValue = pixels[idx];
+            histogram[grayValue]++;
+          }
+        }
+
+        // Equalizz il blocco
+        let cumulativeSum = 0;
+        const lut = new Uint8Array(256);
+        const blockPixels = (endY - by) * (endX - bx);
+        for (let i = 0; i < 256; i++) {
+          cumulativeSum += histogram[i];
+          lut[i] = Math.round((cumulativeSum * 255) / blockPixels);
+        }
+
+        // Applica LUT al blocco
+        for (let y = by; y < endY; y++) {
+          for (let x = bx; x < endX; x++) {
+            const idx = (y * width + x) * 4;
+            const grayValue = pixels[idx];
+            const equalized = lut[grayValue];
+            pixels[idx] = equalized;
+            pixels[idx + 1] = equalized;
+            pixels[idx + 2] = equalized;
+          }
+        }
+      }
+    }
+
+    // 3. Aumenta contrasto con CLAHE
+    for (let index = 0; index < pixels.length; index += 4) {
+      const val = pixels[index];
+      const enhanced = Math.max(0, Math.min(255, val * 1.3 - 20));
+      pixels[index] = enhanced;
+      pixels[index + 1] = enhanced;
+      pixels[index + 2] = enhanced;
+    }
+
+    // 4. Applica sogliatura adattiva per migliorare leggibilità
+    const threshold = 128;
+    for (let index = 0; index < pixels.length; index += 4) {
+      const val = pixels[index];
+      const bw = val > threshold ? 255 : 0;
+      pixels[index] = bw;
+      pixels[index + 1] = bw;
+      pixels[index + 2] = bw;
     }
 
     context.putImageData(imageData, 0, 0);
@@ -622,7 +726,7 @@ export default function Home() {
             }))
             .filter((line) => line.text.length > 0);
 
-    const nome =
+    let nome =
       (mrz.nome ||
       extractLineAfterLabel(
         lines,
@@ -630,7 +734,8 @@ export default function Home() {
         isCrediblePersonValue,
         [/\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/, /\bCITTADINANZA\b/, /\bNATIONALITY\b/],
       )) ?? "";
-    const cognome =
+
+    let cognome =
       (mrz.cognome ||
       extractLineAfterLabel(
         lines,
@@ -638,6 +743,16 @@ export default function Home() {
         isCrediblePersonValue,
         [/\bNOME\b/, /\bNAME\b/, /\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/],
       )) ?? "";
+
+    // Se abbiamo solo uno dei due, prova a fare il parsing completo
+    if ((!nome || !cognome) && (nome || cognome)) {
+      const fullNameCandidate = (nome + " " + cognome).trim();
+      if (isCrediblePersonValue(fullNameCandidate)) {
+        const parsed = parseItalianFullName(fullNameCandidate);
+        if (!nome && parsed.nome) nome = parsed.nome;
+        if (!cognome && parsed.cognome) cognome = parsed.cognome;
+      }
+    }
 
     const birthLine =
       extractLineAfterLabel(
@@ -709,16 +824,40 @@ export default function Home() {
   function applyIdentityDocumentData(
     extracted: ReturnType<typeof extractIdentityDocumentData>,
   ) {
+    // Applica solo i campi con buona qualità
     setForm((prev) => ({
       ...prev,
-      nome: extracted.nome || prev.nome,
-      cognome: extracted.cognome || prev.cognome,
+      nome: extracted.nome && extracted.nome.length > 0 ? extracted.nome : prev.nome,
+      cognome: extracted.cognome && extracted.cognome.length > 0 ? extracted.cognome : prev.cognome,
       dataNascita: extracted.dataNascita || prev.dataNascita || "",
       luogoNascita: extracted.luogoNascita || prev.luogoNascita || "",
       codiceFiscale: extracted.codiceFiscale || prev.codiceFiscale || "",
       sesso: extracted.sesso || prev.sesso || "",
       numeroDocumento: extracted.numeroDocumento || prev.numeroDocumento || "",
     }));
+  }
+
+  function calculateOcrQualityScore(extracted: IdentityDocumentData): number {
+    let score = 0;
+    const maxScore = 100;
+    
+    // Nome e cognome sono importanti
+    if (extracted.nome && extracted.nome.length >= 3) score += 25;
+    if (extracted.cognome && extracted.cognome.length >= 3) score += 25;
+    
+    // Data di nascita
+    if (extracted.dataNascita && extracted.dataNascita.length > 0) score += 15;
+    
+    // Codice fiscale
+    if (extracted.codiceFiscale && /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(extracted.codiceFiscale)) score += 20;
+    
+    // Numero documento
+    if (extracted.numeroDocumento && extracted.numeroDocumento.length > 0) score += 10;
+    
+    // Luogo nascita
+    if (extracted.luogoNascita && extracted.luogoNascita.length > 0) score += 5;
+    
+    return Math.min(score, maxScore);
   }
 
   async function scanIdentityDocument() {
@@ -789,9 +928,11 @@ export default function Home() {
           extracted.numeroDocumento,
         ].filter((value) => Boolean(value && value.trim())).length;
 
+        const qualityScore = calculateOcrQualityScore(extracted);
+
         setDocumentScanSuccess(
           filledFields > 0
-            ? `Scansione completata: compilati ${filledFields} campi.`
+            ? `Scansione completata: compilati ${filledFields} campi (qualità: ${qualityScore}%).`
             : "Scansione completata, ma non ho trovato dati affidabili.",
         );
       } finally {
