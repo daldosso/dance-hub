@@ -94,6 +94,8 @@ type OcrRectangle = {
   height: number;
 };
 
+type OcrPartialIdentity = Partial<Pick<IdentityDocumentData, "nome" | "cognome">>;
+
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
 const stati: StatoIscrizione[] = ["Attivo", "In sospeso", "Arretrato"];
 
@@ -397,7 +399,7 @@ export default function Home() {
   function normalizeOcrLine(line: string) {
     return line
       .replace(/\u00A0/g, " ")
-      .replace(/[^A-Z0-9À-ÿ\s:./'-]/g, " ")
+      .replace(/[^A-Z0-9À-ÿ\s:./'<>-]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -417,6 +419,10 @@ export default function Home() {
       .replace(/[\/|]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  function stripMrzPrefix(value: string) {
+    return value.replace(/^(?:I<|I|ID|IT|ITA|CIE|P<|P)+/, "");
   }
 
   function collectOcrLines(page: OcrPage) {
@@ -456,6 +462,44 @@ export default function Home() {
     if (!/[AEIOU]/.test(lettersOnly)) return false;
 
     return true;
+  }
+
+  function extractMrzIdentityData(text: string): OcrPartialIdentity {
+    const lines = normalizeOcrText(text)
+      .split("\n")
+      .map(normalizeOcrLine)
+      .filter(Boolean);
+
+    for (const line of lines) {
+      const compact = line.replace(/\s+/g, "");
+      const mrzSplitIndex = compact.indexOf("<<");
+      if (mrzSplitIndex < 0) continue;
+      if ((compact.match(/</g) ?? []).length < 3) continue;
+
+      const leftTokens = compact.slice(0, mrzSplitIndex).split("<").filter(Boolean);
+      const rightTokens = compact.slice(mrzSplitIndex + 2).split("<").filter(Boolean);
+      if (leftTokens.length === 0 || rightTokens.length === 0) continue;
+
+      const surnameTokens = leftTokens.slice(-2);
+      const surname = surnameTokens
+        .map((token, index) => (index === 0 ? stripMrzPrefix(token) : token))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const nome = rightTokens
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (surname || nome) {
+        return {
+          nome: isCrediblePersonValue(nome) ? nome : "",
+          cognome: isCrediblePersonValue(surname) ? surname : "",
+        };
+      }
+    }
+
+    return {};
   }
 
   function extractLineAfterLabel(
@@ -564,6 +608,7 @@ export default function Home() {
 
   function extractIdentityDocumentData(page: OcrPage): IdentityDocumentData {
     const normalizedText = normalizeOcrText(page.text ?? "");
+    const mrz = extractMrzIdentityData(normalizedText);
     const ocrLines = collectOcrLines(page);
     const lines =
       ocrLines.length > 0
@@ -578,19 +623,21 @@ export default function Home() {
             .filter((line) => line.text.length > 0);
 
     const nome =
+      (mrz.nome ||
       extractLineAfterLabel(
         lines,
         [/\bNOME\b/, /\bNAME\b/],
         isCrediblePersonValue,
         [/\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/, /\bCITTADINANZA\b/, /\bNATIONALITY\b/],
-      ) ?? "";
+      )) ?? "";
     const cognome =
+      (mrz.cognome ||
       extractLineAfterLabel(
         lines,
         [/\bCOGNOME\b/, /\bSURNAME\b/],
         isCrediblePersonValue,
         [/\bNOME\b/, /\bNAME\b/, /\bLUOGO\b/, /\bPLACE\b/, /\bSESSO\b/, /\bSEX\b/],
-      ) ?? "";
+      )) ?? "";
 
     const birthLine =
       extractLineAfterLabel(
