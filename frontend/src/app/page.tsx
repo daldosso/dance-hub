@@ -44,6 +44,39 @@ type BackendUser = {
   courses?: { id: number; title: string }[];
 };
 
+type OcrBox = {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
+
+type OcrWord = {
+  text: string;
+  confidence: number;
+  bbox: OcrBox;
+};
+
+type OcrLine = {
+  words?: OcrWord[];
+  text: string;
+  confidence: number;
+  bbox: OcrBox;
+};
+
+type OcrParagraph = {
+  lines: OcrLine[];
+};
+
+type OcrBlock = {
+  paragraphs: OcrParagraph[];
+};
+
+type OcrPage = {
+  text: string;
+  blocks: OcrBlock[] | null;
+};
+
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
 const stati: StatoIscrizione[] = ["Attivo", "In sospeso", "Arretrato"];
 
@@ -369,26 +402,16 @@ export default function Home() {
       .trim();
   }
 
-  function collectOcrLines(page: { blocks?: any[] | null }) {
+  function collectOcrLines(page: OcrPage) {
     const blocks = Array.isArray(page.blocks) ? page.blocks : [];
     const lines = blocks
-      .flatMap((block) =>
-        Array.isArray(block.paragraphs)
-          ? block.paragraphs.flatMap((paragraph: any) =>
-              Array.isArray(paragraph.lines) ? paragraph.lines : [],
-            )
-          : [],
-      )
-      .filter((line) => typeof line?.text === "string" && line.text.trim().length > 0)
+      .flatMap((block) => block.paragraphs)
+      .flatMap((paragraph) => paragraph.lines)
+      .filter((line) => line.text.trim().length > 0)
       .sort((a, b) => {
-        const aY = typeof a?.bbox?.y0 === "number" ? a.bbox.y0 : 0;
-        const bY = typeof b?.bbox?.y0 === "number" ? b.bbox.y0 : 0;
-        const yDelta = aY - bY;
+        const yDelta = a.bbox.y0 - b.bbox.y0;
         if (Math.abs(yDelta) > 12) return yDelta;
-
-        const aX = typeof a?.bbox?.x0 === "number" ? a.bbox.x0 : 0;
-        const bX = typeof b?.bbox?.x0 === "number" ? b.bbox.x0 : 0;
-        return aX - bX;
+        return a.bbox.x0 - b.bbox.x0;
       });
 
     return lines;
@@ -419,7 +442,7 @@ export default function Home() {
   }
 
   function extractLineAfterLabel(
-    lines: any[],
+    lines: OcrLine[],
     labelRegexes: RegExp[],
     validator?: (value: string) => boolean,
     stopRegexes: RegExp[] = [],
@@ -437,8 +460,8 @@ export default function Home() {
         return inlineValue;
       }
 
-      const baseY = typeof lines[index]?.bbox?.y1 === "number" ? lines[index].bbox.y1 : 0;
-      const baseX = typeof lines[index]?.bbox?.x0 === "number" ? lines[index].bbox.x0 : 0;
+      const baseY = lines[index].bbox.y1;
+      const baseX = lines[index].bbox.x0;
 
       for (let offset = 1; offset <= 4; offset += 1) {
         const candidateLine = lines[index + offset];
@@ -450,10 +473,10 @@ export default function Home() {
         if (!candidate) continue;
         if (stopRegexes.some((regex) => regex.test(candidate))) break;
 
-        const candidateY = typeof candidateLine?.bbox?.y0 === "number" ? candidateLine.bbox.y0 : 0;
+        const candidateY = candidateLine.bbox.y0;
         if (candidateY - baseY > 120) break;
 
-        const candidateX = typeof candidateLine?.bbox?.x0 === "number" ? candidateLine.bbox.x0 : 0;
+        const candidateX = candidateLine.bbox.x0;
         if (Math.abs(candidateX - baseX) > 320) continue;
 
         if (isLikelyLabel(candidate)) continue;
@@ -522,7 +545,7 @@ export default function Home() {
     return canvas;
   }
 
-  function extractIdentityDocumentData(page: { text: string; blocks?: any[] | null }) {
+  function extractIdentityDocumentData(page: OcrPage) {
     const normalizedText = normalizeOcrText(page.text ?? "");
     const ocrLines = collectOcrLines(page);
     const lines =
