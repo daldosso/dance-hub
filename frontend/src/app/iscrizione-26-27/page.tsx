@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 type Course = {
@@ -164,7 +163,7 @@ export default function EnrollmentPage() {
           </div>
         </header>
 
-        <section className="mt-4 grid flex-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="mt-4 flex-1">
           <form
             onSubmit={handleSubmit}
             className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.12)] sm:p-6"
@@ -385,22 +384,6 @@ export default function EnrollmentPage() {
               {submitting ? "Salvataggio..." : "Invia iscrizione"}
             </button>
           </form>
-
-          <aside className="rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_20px_50px_rgba(0,0,0,0.12)] sm:p-6">
-            <div className="space-y-3 text-sm leading-6 text-[#666666]">
-              <p className="font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                Latin Charm
-              </p>
-              <p>Iscrizione semplice e veloce per l&apos;anno 2026 / 2027.</p>
-              <p>
-                Se ti serve l&apos;area riservata dello staff, vai su{" "}
-                <Link href="/login" className="font-semibold text-[#F557BF] underline decoration-[#F557BF]/35 underline-offset-4">
-                  login
-                </Link>
-                .
-              </p>
-            </div>
-          </aside>
         </section>
       </main>
     </div>
