@@ -17,6 +17,11 @@ type Iscritto = {
   livello: Livello;
   stato: StatoIscrizione;
   note?: string;
+  dataNascita?: string;
+  luogoNascita?: string;
+  codiceFiscale?: string;
+  sesso?: string;
+  numeroDocumento?: string;
   photoUrl?: string;
   courseIds?: number[];
 };
@@ -73,6 +78,20 @@ export default function Home() {
   const [previewIscritto, setPreviewIscritto] = useState<Iscritto | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
+  const [documentScanFile, setDocumentScanFile] = useState<File | null>(null);
+  const [documentScanPreview, setDocumentScanPreview] = useState<string | null>(
+    null,
+  );
+  const [documentScanProcessing, setDocumentScanProcessing] = useState(false);
+  const [documentScanProgress, setDocumentScanProgress] = useState<number | null>(
+    null,
+  );
+  const [documentScanError, setDocumentScanError] = useState<string | null>(
+    null,
+  );
+  const [documentScanSuccess, setDocumentScanSuccess] = useState<string | null>(
+    null,
+  );
 
   const [corsi, setCorsi] = useState<Corso[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">(
@@ -88,6 +107,11 @@ export default function Home() {
     livello: "Principiante",
     stato: "Attivo",
     note: "",
+    dataNascita: "",
+    luogoNascita: "",
+    codiceFiscale: "",
+    sesso: "",
+    numeroDocumento: "",
   });
 
   const iscrittiFiltrati = useMemo(() => {
@@ -144,6 +168,14 @@ export default function Home() {
       }
     };
   }, [photoPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (documentScanPreview) {
+        URL.revokeObjectURL(documentScanPreview);
+      }
+    };
+  }, [documentScanPreview]);
 
   // Protegge la pagina: se non c'è una "sessione" nel browser,
   // rimanda l'utente alla pagina di login.
@@ -304,6 +336,191 @@ export default function Home() {
     void loadCourses();
   }, []);
 
+  function normalizeOcrLine(line: string) {
+    return line
+      .replace(/\u00A0/g, " ")
+      .replace(/[^A-Z0-9À-ÿ\s:./-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function normalizeOcrText(text: string) {
+    return text
+      .replace(/\r/g, "\n")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+  }
+
+  function isLikelyLabel(line: string) {
+    return /^(REPUBBLICA|ITALIANA|CARTA|IDENTITA|DOCUMENTO|COGNOME|NOME|NATO|NATA|SESSO|DATA|LUOGO|FISCALE|CODICE|SCADENZA|RILASCIO|COMUNE|PROVINCIA|NAZIONALITA|HEIGHT|SEX)\b/.test(
+      line,
+    );
+  }
+
+  function extractValueNearLabel(lines: string[], labelRegexes: RegExp[]) {
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const matchedLabel = labelRegexes.find((regex) => regex.test(line));
+
+      if (!matchedLabel) continue;
+
+      const inlineValue = line.replace(matchedLabel, "").replace(/^[\s:.-]+/, "").trim();
+      if (inlineValue && !isLikelyLabel(inlineValue)) {
+        return inlineValue;
+      }
+
+      for (let offset = 1; offset <= 3; offset += 1) {
+        const candidate = lines[index + offset];
+        if (!candidate) continue;
+        if (isLikelyLabel(candidate)) continue;
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  function formatDateForInput(rawDate: string | null) {
+    if (!rawDate) return "";
+
+    const match = rawDate.match(/^(\d{2})[./-](\d{2})[./-](\d{2,4})$/);
+    if (!match) return "";
+
+    const day = match[1];
+    const month = match[2];
+    const yearToken = match[3];
+    const year =
+      yearToken.length === 2
+        ? Number(yearToken) > 30
+          ? `19${yearToken}`
+          : `20${yearToken}`
+        : yearToken;
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function extractIdentityDocumentData(text: string) {
+    const normalizedText = normalizeOcrText(text);
+    const lines = normalizedText
+      .split("\n")
+      .map(normalizeOcrLine)
+      .filter(Boolean);
+
+    const compactText = lines.join(" ");
+
+    const nome =
+      extractValueNearLabel(lines, [/\bNOME\b/]) ??
+      extractValueNearLabel(lines, [/\bNAME\b/]) ??
+      "";
+    const cognome =
+      extractValueNearLabel(lines, [/\bCOGNOME\b/]) ??
+      extractValueNearLabel(lines, [/\bSURNAME\b/]) ??
+      "";
+    const luogoNascita =
+      extractValueNearLabel(lines, [/\bLUOGO DI NASCITA\b/, /\bNATO A\b/, /\bNATA A\b/]) ??
+      "";
+    const sesso =
+      extractValueNearLabel(lines, [/\bSESSO\b/, /\bSEX\b/]) ?? "";
+    const numeroDocumento =
+      extractValueNearLabel(lines, [/\bDOCUMENTO\b/, /\bDOC\.?\b/]) ?? "";
+    const dataNascitaMatch = compactText.match(
+      /\b(\d{2}[./-]\d{2}[./-]\d{2,4})\b/,
+    );
+    const dataNascita = formatDateForInput(dataNascitaMatch?.[1] ?? null);
+    const codiceFiscaleMatch = compactText.match(/\b[A-Z0-9]{16}\b/);
+    const codiceFiscale =
+      extractValueNearLabel(lines, [/\bCODICE FISCALE\b/, /\bFISCALE\b/]) ??
+      codiceFiscaleMatch?.[0] ??
+      "";
+
+    return {
+      nome,
+      cognome,
+      luogoNascita,
+      sesso,
+      numeroDocumento,
+      dataNascita,
+      codiceFiscale,
+    };
+  }
+
+  function applyIdentityDocumentData(
+    extracted: ReturnType<typeof extractIdentityDocumentData>,
+  ) {
+    setForm((prev) => ({
+      ...prev,
+      nome: extracted.nome || prev.nome,
+      cognome: extracted.cognome || prev.cognome,
+      dataNascita: extracted.dataNascita || prev.dataNascita || "",
+      luogoNascita: extracted.luogoNascita || prev.luogoNascita || "",
+      codiceFiscale: extracted.codiceFiscale || prev.codiceFiscale || "",
+      sesso: extracted.sesso || prev.sesso || "",
+      numeroDocumento: extracted.numeroDocumento || prev.numeroDocumento || "",
+    }));
+  }
+
+  async function scanIdentityDocument() {
+    if (!documentScanFile) {
+      setDocumentScanError(
+        "Seleziona prima una foto della carta d'identità.",
+      );
+      return;
+    }
+
+    setDocumentScanProcessing(true);
+    setDocumentScanError(null);
+    setDocumentScanSuccess(null);
+    setDocumentScanProgress(0);
+
+    try {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("ita", 1, {
+        logger: (message) => {
+          if (typeof message.progress === "number") {
+            setDocumentScanProgress(Math.round(message.progress * 100));
+          }
+        },
+      });
+
+      try {
+        const result = await worker.recognize(documentScanFile, {
+          rotateAuto: true,
+        });
+        const extracted = extractIdentityDocumentData(result.data.text ?? "");
+        applyIdentityDocumentData(extracted);
+
+        const filledFields = [
+          extracted.nome,
+          extracted.cognome,
+          extracted.dataNascita,
+          extracted.luogoNascita,
+          extracted.codiceFiscale,
+          extracted.sesso,
+          extracted.numeroDocumento,
+        ].filter((value) => Boolean(value && value.trim())).length;
+
+        setDocumentScanSuccess(
+          filledFields > 0
+            ? `Scansione completata: compilati ${filledFields} campi.`
+            : "Scansione completata, ma non ho trovato dati affidabili.",
+        );
+      } finally {
+        await worker.terminate();
+      }
+    } catch (error) {
+      console.error("Errore OCR documento", error);
+      setDocumentScanError(
+        error instanceof Error
+          ? error.message
+          : "Errore imprevisto durante la scansione del documento.",
+      );
+    } finally {
+      setDocumentScanProcessing(false);
+      setDocumentScanProgress(null);
+    }
+  }
+
   function resetForm() {
     setForm({
       nome: "",
@@ -314,6 +531,11 @@ export default function Home() {
       livello: "Principiante",
       stato: "Attivo",
       note: "",
+      dataNascita: "",
+      luogoNascita: "",
+      codiceFiscale: "",
+      sesso: "",
+      numeroDocumento: "",
     });
     setSelezionato(null);
   }
@@ -990,6 +1212,95 @@ export default function Home() {
                 />
               </div>
 
+              <div className="rounded-lg border border-white/10 bg-slate-950/30 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+                  Dati documento
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                      Data nascita
+                    </label>
+                    <input
+                      type="date"
+                      value={form.dataNascita ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          dataNascita: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                      Sesso
+                    </label>
+                    <input
+                      type="text"
+                      value={form.sesso ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          sesso: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      placeholder="M / F"
+                      className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                      Luogo nascita
+                    </label>
+                    <input
+                      type="text"
+                      value={form.luogoNascita ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          luogoNascita: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                      Codice fiscale
+                    </label>
+                    <input
+                      type="text"
+                      value={form.codiceFiscale ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          codiceFiscale: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs uppercase tracking-[0.12em] focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-200">
+                      Numero documento
+                    </label>
+                    <input
+                      type="text"
+                      value={form.numeroDocumento ?? ""}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          numeroDocumento: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs uppercase tracking-[0.12em] focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-slate-200">
                   Corso *
@@ -1067,6 +1378,81 @@ export default function Home() {
                   }
                   className="w-full resize-none rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-xs focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
                 />
+              </div>
+
+              <div className="rounded-lg border border-sky-400/20 bg-slate-950/40 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-sky-200">
+                      Scansione carta d&apos;identità
+                    </h3>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Carica una foto leggibile del documento e proviamo a
+                      compilare automaticamente i dati principali.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void scanIdentityDocument()}
+                    disabled={documentScanProcessing || !documentScanFile}
+                    className="inline-flex shrink-0 items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {documentScanProcessing
+                      ? "Scansione..."
+                      : "Estrai dati"}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setDocumentScanError(null);
+                      setDocumentScanSuccess(null);
+
+                      if (documentScanPreview) {
+                        URL.revokeObjectURL(documentScanPreview);
+                      }
+
+                      setDocumentScanFile(file);
+                      setDocumentScanPreview(
+                        file ? URL.createObjectURL(file) : null,
+                      );
+                    }}
+                    className="block w-full text-[11px] text-slate-200 file:mr-2 file:rounded-md file:border-0 file:bg-sky-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-slate-950 hover:file:bg-sky-400"
+                  />
+
+                  {documentScanPreview && (
+                    <div className="overflow-hidden rounded-lg border border-white/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={documentScanPreview}
+                        alt="Anteprima documento"
+                        className="h-36 w-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {typeof documentScanProgress === "number" && (
+                    <p className="text-[11px] text-sky-200">
+                      Elaborazione OCR: {documentScanProgress}%
+                    </p>
+                  )}
+
+                  {documentScanError && (
+                    <p className="text-[11px] text-rose-300">
+                      {documentScanError}
+                    </p>
+                  )}
+                  {documentScanSuccess && (
+                    <p className="text-[11px] text-emerald-300">
+                      {documentScanSuccess}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <button
