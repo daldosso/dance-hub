@@ -358,8 +358,18 @@ export default function Home() {
     );
   }
 
+  function stripDocumentLabels(value: string) {
+    return value
+      .replace(
+        /\b(COGNOME|SURNAME|NOME|NAME|LUOGO|PLACE|DATA|DATE|NASCITA|BIRTH|SESSO|SEX|CITTADINANZA|NATIONALITY|EMISSIONE|ISSUING|SCADENZA|EXPIRY|FIRMA|SIGNATURE|STATURA|HEIGHT|DOCUMENTO|DOC\.?|CODICE|FISCALE)\b/g,
+        " ",
+      )
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function isCrediblePersonValue(value: string) {
-    const normalized = value
+    const normalized = stripDocumentLabels(value)
       .replace(/[’']/g, "'")
       .replace(/\s+/g, " ")
       .trim();
@@ -373,7 +383,7 @@ export default function Home() {
     const alphaWords = words.filter((word) => /[A-ZÀ-ÿ]/.test(word));
     if (alphaWords.length === 0) return false;
 
-    if (alphaWords.some((word) => word.length === 1)) return false;
+    if (alphaWords.length === 1 && alphaWords[0].length === 1) return false;
 
     const lettersOnly = normalized.replace(/[^A-ZÀ-ÿ]/g, "");
     if (lettersOnly.length < 3) return false;
@@ -397,20 +407,24 @@ export default function Home() {
         .replace(matchedLabel, "")
         .replace(/^[\s:.-]+/, "")
         .trim();
+
+      const cleanedInlineValue = stripDocumentLabels(inlineValue);
       if (
-        inlineValue &&
-        !isLikelyLabel(inlineValue) &&
-        (!validator || validator(inlineValue))
+        cleanedInlineValue &&
+        !isLikelyLabel(cleanedInlineValue) &&
+        (!validator || validator(cleanedInlineValue))
       ) {
-        return inlineValue;
+        return cleanedInlineValue;
       }
 
       for (let offset = 1; offset <= 3; offset += 1) {
         const candidate = lines[index + offset];
         if (!candidate) continue;
-        if (isLikelyLabel(candidate)) continue;
-        if (validator && !validator(candidate)) continue;
-        return candidate;
+        const cleanedCandidate = stripDocumentLabels(candidate);
+        if (!cleanedCandidate) continue;
+        if (isLikelyLabel(cleanedCandidate)) continue;
+        if (validator && !validator(cleanedCandidate)) continue;
+        return cleanedCandidate;
       }
     }
 
@@ -427,13 +441,17 @@ export default function Home() {
 
     const value = match[1]
       .replace(/\s+/g, " ")
+      .replace(/[’']/g, "'")
       .replace(/^[\s:.-]+/, "")
       .trim();
 
     if (!value) return null;
-    if (validator && !validator(value)) return null;
 
-    return value;
+    const cleanedValue = stripDocumentLabels(value);
+    if (!cleanedValue) return null;
+    if (validator && !validator(cleanedValue)) return null;
+
+    return cleanedValue;
   }
 
   function formatDateForInput(rawDate: string | null) {
@@ -453,6 +471,48 @@ export default function Home() {
         : yearToken;
 
     return `${year}-${month}-${day}`;
+  }
+
+  async function prepareDocumentForOcr(file: File) {
+    const bitmap = await createImageBitmap(file);
+    const maxDimension = 2000;
+    const scale = Math.min(2, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+      bitmap.close();
+      return file;
+    }
+
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const imageData = context.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
+
+    // Aumenta contrasto e converte in grigio per aiutare Tesseract sui documenti stampati.
+    for (let index = 0; index < pixels.length; index += 4) {
+      const gray =
+        pixels[index] * 0.299 +
+        pixels[index + 1] * 0.587 +
+        pixels[index + 2] * 0.114;
+      const contrasted = Math.max(
+        0,
+        Math.min(255, (gray - 128) * 1.45 + 128),
+      );
+      pixels[index] = contrasted;
+      pixels[index + 1] = contrasted;
+      pixels[index + 2] = contrasted;
+    }
+
+    context.putImageData(imageData, 0, 0);
+    return canvas;
   }
 
   function extractIdentityDocumentData(text: string) {
@@ -482,18 +542,36 @@ export default function Home() {
       ) ??
       extractValueNearLabel(lines, [/\bSURNAME\b/], isCrediblePersonValue) ??
       "";
+    const birthPlaceAndDate =
+      extractValueNearLabel(
+        lines,
+        [
+          /\bLUOGO E DATA DI NASCITA\b/,
+          /\bPLACE AND DATE OF BIRTH\b/,
+          /\bLUOGO DI NASCITA\b/,
+          /\bNATO A\b/,
+          /\bNATA A\b/,
+        ],
+      ) ?? "";
     const luogoNascita =
-      extractValueNearLabel(lines, [/\bLUOGO DI NASCITA\b/, /\bNATO A\b/, /\bNATA A\b/]) ??
-      "";
-    const sesso =
+      stripDocumentLabels(
+        birthPlaceAndDate
+          .replace(/\b\d{2}[./-]\d{2}[./-]\d{2,4}\b.*/, "")
+          .replace(/\b(?:ITALIANA|ITALIANO|ITALIANA)\b/g, " "),
+      ) || "";
+    const sessoCandidate =
       extractValueNearLabel(lines, [/\bSESSO\b/, /\bSEX\b/]) ?? "";
+    const sessoMatch = stripDocumentLabels(sessoCandidate).match(/\b(M|F|X)\b/);
+    const sesso = sessoMatch?.[1] ?? "";
     const numeroDocumento =
       extractValueNearLabel(lines, [/\bDOCUMENTO\b/, /\bDOC\.?\b/]) ?? "";
     const dataNascitaMatch = compactText.match(
       /\b(\d{2}[./-]\d{2}[./-]\d{2,4})\b/,
     );
     const dataNascita = formatDateForInput(dataNascitaMatch?.[1] ?? null);
-    const codiceFiscaleMatch = compactText.match(/\b[A-Z0-9]{16}\b/);
+    const codiceFiscaleMatch = compactText.match(
+      /\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\d{3}[A-Z]\b/,
+    );
     const codiceFiscale =
       extractValueNearLabel(lines, [/\bCODICE FISCALE\b/, /\bFISCALE\b/]) ??
       codiceFiscaleMatch?.[0] ??
@@ -549,7 +627,8 @@ export default function Home() {
       });
 
       try {
-        const result = await worker.recognize(documentScanFile, {
+        const preparedDocument = await prepareDocumentForOcr(documentScanFile);
+        const result = await worker.recognize(preparedDocument, {
           rotateAuto: true,
         });
         const extracted = extractIdentityDocumentData(result.data.text ?? "");
