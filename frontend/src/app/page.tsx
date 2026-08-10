@@ -417,6 +417,25 @@ export default function Home() {
     return null;
   }
 
+  function extractCompactField(
+    text: string,
+    pattern: RegExp,
+    validator?: (value: string) => boolean,
+  ) {
+    const match = text.match(pattern);
+    if (!match) return null;
+
+    const value = match[1]
+      .replace(/\s+/g, " ")
+      .replace(/^[\s:.-]+/, "")
+      .trim();
+
+    if (!value) return null;
+    if (validator && !validator(value)) return null;
+
+    return value;
+  }
+
   function formatDateForInput(rawDate: string | null) {
     if (!rawDate) return "";
 
@@ -447,10 +466,20 @@ export default function Home() {
 
     const nome =
       extractValueNearLabel(lines, [/\bNOME\b/], isCrediblePersonValue) ??
+      extractCompactField(
+        compactText,
+        /(?:\bNOME\b(?:\s*\/\s*\bNAME\b|\s+\bNAME\b)?|\bNAME\b)\s*[:.\-]?\s*([A-ZÀ-ÿ' ]{2,60}?)(?=\s+(?:\bLUOGO\b|\bPLACE\b|\bCOGNOME\b|\bSURNAME\b|\bSESSO\b|\bSEX\b|\bCITTADINANZA\b|\bNATIONALITY\b|\bEMISSIONE\b|\bISSUING\b|\bSCADENZA\b|\bEXPIRY\b|\bFIRMA\b|\bSIGNATURE\b)|$)/,
+        isCrediblePersonValue,
+      ) ??
       extractValueNearLabel(lines, [/\bNAME\b/], isCrediblePersonValue) ??
       "";
     const cognome =
       extractValueNearLabel(lines, [/\bCOGNOME\b/], isCrediblePersonValue) ??
+      extractCompactField(
+        compactText,
+        /(?:\bCOGNOME\b(?:\s*\/\s*\bSURNAME\b|\s+\bSURNAME\b)?|\bSURNAME\b)\s*[:.\-]?\s*([A-ZÀ-ÿ' ]{2,60}?)(?=\s+(?:\bNOME\b|\bNAME\b|\bLUOGO\b|\bPLACE\b|\bSESSO\b|\bSEX\b|\bCITTADINANZA\b|\bNATIONALITY\b|\bEMISSIONE\b|\bISSUING\b|\bSCADENZA\b|\bEXPIRY\b|\bFIRMA\b|\bSIGNATURE\b)|$)/,
+        isCrediblePersonValue,
+      ) ??
       extractValueNearLabel(lines, [/\bSURNAME\b/], isCrediblePersonValue) ??
       "";
     const luogoNascita =
