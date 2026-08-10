@@ -77,6 +77,23 @@ type OcrPage = {
   blocks: OcrBlock[] | null;
 };
 
+type IdentityDocumentData = {
+  nome: string;
+  cognome: string;
+  luogoNascita: string;
+  sesso: string;
+  numeroDocumento: string;
+  dataNascita: string;
+  codiceFiscale: string;
+};
+
+type OcrRectangle = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
 const livelli: Livello[] = ["Principiante", "Intermedio", "Avanzato"];
 const stati: StatoIscrizione[] = ["Attivo", "In sospeso", "Arretrato"];
 
@@ -521,7 +538,7 @@ export default function Home() {
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) {
       bitmap.close();
-      return file;
+      return canvas;
     }
 
     context.drawImage(bitmap, 0, 0, width, height);
@@ -545,7 +562,7 @@ export default function Home() {
     return canvas;
   }
 
-  function extractIdentityDocumentData(page: OcrPage) {
+  function extractIdentityDocumentData(page: OcrPage): IdentityDocumentData {
     const normalizedText = normalizeOcrText(page.text ?? "");
     const ocrLines = collectOcrLines(page);
     const lines =
@@ -629,6 +646,19 @@ export default function Home() {
     };
   }
 
+  function mergeIdentityDocumentData(
+    primary: IdentityDocumentData,
+    secondary: IdentityDocumentData,
+  ): IdentityDocumentData {
+    return {
+      ...primary,
+      nome: isCrediblePersonValue(secondary.nome) ? secondary.nome : primary.nome,
+      cognome: isCrediblePersonValue(secondary.cognome)
+        ? secondary.cognome
+        : primary.cognome,
+    };
+  }
+
   function applyIdentityDocumentData(
     extracted: ReturnType<typeof extractIdentityDocumentData>,
   ) {
@@ -670,16 +700,36 @@ export default function Home() {
 
       try {
         const preparedDocument = await prepareDocumentForOcr(documentScanFile);
+        const headerRectangle: OcrRectangle = {
+          left: 0,
+          top: 0,
+          width: preparedDocument.width,
+          height: Math.max(1, Math.round(preparedDocument.height * 0.58)),
+        };
+
         await worker.setParameters({
           tessedit_pageseg_mode: PSM.SPARSE_TEXT,
           preserve_interword_spaces: "1",
         });
-        const result = await worker.recognize(
+        const fullResult = await worker.recognize(
           preparedDocument,
           { rotateAuto: true },
           { text: true, blocks: true },
         );
-        const extracted = extractIdentityDocumentData(result.data);
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+          preserve_interword_spaces: "1",
+        });
+        const headerResult = await worker.recognize(
+          preparedDocument,
+          { rotateAuto: true, rectangle: headerRectangle },
+          { text: true, blocks: true },
+        );
+
+        const extracted = mergeIdentityDocumentData(
+          extractIdentityDocumentData(fullResult.data),
+          extractIdentityDocumentData(headerResult.data),
+        );
         applyIdentityDocumentData(extracted);
 
         const filledFields = [
