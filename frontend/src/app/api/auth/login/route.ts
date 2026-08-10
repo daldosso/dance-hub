@@ -11,13 +11,16 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "";
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET non definito nelle variabili d'ambiente");
-}
-
 export async function POST(req: NextRequest) {
   try {
+    const JWT_SECRET = process.env.JWT_SECRET ?? "";
+    if (!JWT_SECRET) {
+      return NextResponse.json(
+        { error: "JWT_SECRET non configurato" },
+        { status: 500 },
+      );
+    }
+
     const payload = await req.json();
     const { email, password } = loginSchema.parse(payload);
 

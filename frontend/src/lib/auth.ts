@@ -1,12 +1,6 @@
 import jwt from "jsonwebtoken";
 import type { NextRequest } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "";
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET non definito nelle variabili d'ambiente");
-}
-
 export type AuthUser = { id: number; email: string; role: string };
 
 type DecodedJwt = { id?: number; email?: string; role?: string };
@@ -26,7 +20,16 @@ export function getAuthUser(
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as unknown as DecodedJwt;
+    const jwtSecret = process.env.JWT_SECRET ?? "";
+    if (!jwtSecret) {
+      return {
+        ok: false,
+        status: 500,
+        error: "JWT_SECRET non configurato",
+      };
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as unknown as DecodedJwt;
     if (!decoded || !decoded.id || !decoded.email || !decoded.role) {
       return { ok: false, status: 403, error: "Token non valido o scaduto" };
     }
