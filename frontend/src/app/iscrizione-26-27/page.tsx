@@ -50,13 +50,15 @@ export default function EnrollmentPage() {
     document.title = "Iscrizione 2026/2027 | Dance Hub";
   }, []);
 
-  useEffect(() => {
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+  function getPublicApiPath(path: string) {
+    return path.startsWith("/") ? path : `/${path}`;
+  }
 
+  useEffect(() => {
     async function loadCourses() {
       try {
         setLoadingCourses(true);
-        const res = await fetch(`${apiBase}/api/courses`);
+        const res = await fetch(getPublicApiPath("/api/courses"));
         if (!res.ok) return;
 
         const raw = (await res.json()) as { courses?: Course[] };
@@ -93,7 +95,6 @@ export default function EnrollmentPage() {
     setSuccessMessage(null);
 
     try {
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
       const payload = {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
@@ -108,7 +109,7 @@ export default function EnrollmentPage() {
         consent: form.consent,
       };
 
-      const res = await fetch(`${apiBase}/api/public-enrollment`, {
+      const res = await fetch(getPublicApiPath("/api/public-enrollment"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
