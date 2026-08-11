@@ -573,12 +573,13 @@ export default function EnrollmentPage() {
               <input
                 type="checkbox"
                 checked={form.consent}
+                required
                 onChange={(event) =>
                   setForm((current) => ({ ...current, consent: event.target.checked }))
                 }
                 className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
               />
-              <span>Autorizzo l&apos;uso dei dati per l&apos;iscrizione.</span>
+              <span>Autorizzo l&apos;uso dei dati per l&apos;iscrizione. *</span>
             </label>
 
             {errorMessage && (
