@@ -109,6 +109,13 @@ const corsiPredefiniti = [
   "Standard & Latini",
 ];
 
+function removeAuthAndRedirect(router: ReturnType<typeof useRouter>) {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(AUTH_KEY);
+  }
+  router.replace("/login");
+}
+
 export default function Home() {
   const router = useRouter();
   const [iscritti, setIscritti] = useState<Iscritto[]>([]);
@@ -278,6 +285,10 @@ export default function Home() {
         });
 
         if (!res.ok) {
+          if (res.status === 403) {
+            removeAuthAndRedirect(router);
+            return;
+          }
           throw new Error(`Errore ${res.status} nel caricamento utenti`);
         }
 
@@ -1099,6 +1110,10 @@ export default function Home() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         console.error("Upload photo error:", res.status, text);
+        if (res.status === 403) {
+          removeAuthAndRedirect(router);
+          return;
+        }
         setPhotoError(
           res.status === 401
             ? "Non autorizzato. Esegui di nuovo il login."

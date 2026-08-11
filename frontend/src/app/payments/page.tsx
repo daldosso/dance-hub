@@ -41,6 +41,13 @@ type MatrixPagamenti = Record<number, Record<string, PagamentoMese>>; // userId 
 
 const AUTH_KEY = "dance-hub-auth";
 
+function removeAuthAndRedirect(router: ReturnType<typeof useRouter>) {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(AUTH_KEY);
+  }
+  router.replace("/login");
+}
+
 // Mesi da visualizzare: anno accademico Settembre -> Giugno
 function generaMesiAnnoAccademico(): Mese[] {
   const now = new Date();
@@ -160,6 +167,10 @@ export default function PaymentsPage() {
 
         const res = await fetch(`${apiBase}/api/users`);
         if (!res.ok) {
+          if (res.status === 403) {
+            removeAuthAndRedirect(router);
+            return;
+          }
           throw new Error(`Errore ${res.status} nel caricamento utenti`);
         }
 
@@ -231,7 +242,12 @@ export default function PaymentsPage() {
             Authorization: `Bearer ${token}`,
           },
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (res.status === 403) {
+            removeAuthAndRedirect(router);
+          }
+          return;
+        }
 
         const raw = (await res.json()) as {
           payments?: {
