@@ -49,7 +49,57 @@ const initialForm: FormState = {
 
 const skillLevels = ["Principiante", "Intermedio", "Avanzato"];
 const genders = ["Donna", "Uomo", "Altro", "Preferisco non dirlo"];
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+const PHOTO_MAX_DIMENSION = 1600;
+const PHOTO_QUALITY = 0.82;
+
+async function optimizeEnrollmentPhoto(file: File): Promise<EnrollmentPhoto> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(
+      1,
+      PHOTO_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height),
+    );
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      bitmap.close();
+      return { file, previewUrl: URL.createObjectURL(file) };
+    }
+
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const compressedBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", PHOTO_QUALITY);
+    });
+
+    if (!compressedBlob) {
+      return { file, previewUrl: URL.createObjectURL(file) };
+    }
+
+    const compressedFile = new File(
+      [compressedBlob],
+      `${file.name.replace(/\.[^.]+$/, "") || "photo"}.jpg`,
+      {
+        type: "image/jpeg",
+        lastModified: file.lastModified,
+      },
+    );
+
+    return {
+      file: compressedFile,
+      previewUrl: URL.createObjectURL(compressedFile),
+    };
+  } catch {
+    return { file, previewUrl: URL.createObjectURL(file) };
+  }
+}
 
 export default function EnrollmentPage() {
   const [form, setForm] = useState<FormState>(initialForm);
@@ -63,6 +113,7 @@ export default function EnrollmentPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     document.title = "Iscrizione 2026/2027 | Dance Hub";
@@ -186,33 +237,47 @@ export default function EnrollmentPage() {
     }
   }
 
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const nextFile = event.target.files?.[0] ?? null;
 
     if (!nextFile) {
-      setPhoto({ file: null, previewUrl: null });
+      setPhoto((current) => {
+        if (current.previewUrl) {
+          URL.revokeObjectURL(current.previewUrl);
+        }
+        return { file: null, previewUrl: null };
+      });
       return;
     }
 
     if (!nextFile.type.startsWith("image/")) {
       setErrorMessage("La foto deve essere un'immagine.");
       event.target.value = "";
-      setPhoto({ file: null, previewUrl: null });
-      return;
-    }
-
-    if (nextFile.size > MAX_PHOTO_SIZE) {
-      setErrorMessage("La foto è troppo grande: massimo 5MB.");
-      event.target.value = "";
-      setPhoto({ file: null, previewUrl: null });
+      setPhoto((current) => {
+        if (current.previewUrl) {
+          URL.revokeObjectURL(current.previewUrl);
+        }
+        return { file: null, previewUrl: null };
+      });
       return;
     }
 
     setErrorMessage(null);
-    setPhoto({
-      file: nextFile,
-      previewUrl: URL.createObjectURL(nextFile),
+    const optimizedPhoto = await optimizeEnrollmentPhoto(nextFile);
+    setPhoto((current) => {
+      if (current.previewUrl) {
+        URL.revokeObjectURL(current.previewUrl);
+      }
+      return optimizedPhoto;
     });
+  }
+
+  function openGalleryPicker() {
+    photoInputRef.current?.click();
+  }
+
+  function openCameraPicker() {
+    cameraPhotoInputRef.current?.click();
   }
 
   return (
@@ -428,17 +493,40 @@ export default function EnrollmentPage() {
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Foto profilo
                 </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={openGalleryPicker}
+                    className="inline-flex items-center justify-center rounded-2xl border border-[#F557BF]/25 bg-white px-4 py-3 text-sm font-semibold text-[#3d3d3d] transition hover:bg-[#F557BF]/5"
+                  >
+                    Scegli dalla memoria
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openCameraPicker}
+                    className="inline-flex items-center justify-center rounded-2xl border border-[#3d3d3d]/15 bg-[#3d3d3d] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#585858]"
+                  >
+                    Scatta foto
+                  </button>
+                </div>
                 <input
                   ref={photoInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handlePhotoChange}
-                  className="block w-full cursor-pointer rounded-2xl border border-[#F557BF]/25 bg-white px-4 py-3 text-sm text-[#3d3d3d] file:mr-4 file:rounded-xl file:border-0 file:bg-[#3d3d3d] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#585858]"
+                  className="hidden"
+                />
+                <input
+                  ref={cameraPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="hidden"
                 />
                 <p className="mt-2 text-xs text-[#666666]">
-                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Su smartphone puoi
-                  scegliere una foto dalla memoria o scattarla al momento. Dimensione
-                  massima 5MB.
+                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Puoi scegliere una
+                  foto dalla memoria oppure scattarla al momento. Dimensione massima 5MB.
                 </p>
                 {photo.previewUrl && (
                   <div className="mt-4 overflow-hidden rounded-3xl border border-[#F557BF]/20 bg-white shadow-sm">
@@ -448,12 +536,33 @@ export default function EnrollmentPage() {
                       className="h-48 w-full object-cover sm:h-56"
                     />
                     <div className="border-t border-[#F557BF]/10 px-4 py-3">
-                      <p className="truncate text-sm font-semibold text-[#3d3d3d]">
-                        {photo.file?.name}
-                      </p>
-                      <p className="text-xs text-[#666666]">
-                        Anteprima pronta per l&apos;upload
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#3d3d3d]">
+                            {photo.file?.name}
+                          </p>
+                          <p className="text-xs text-[#666666]">
+                            Anteprima pronta per l&apos;upload
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPhoto((current) => {
+                              if (current.previewUrl) {
+                                URL.revokeObjectURL(current.previewUrl);
+                              }
+                              if (photoInputRef.current) {
+                                photoInputRef.current.value = "";
+                              }
+                              return { file: null, previewUrl: null };
+                            })
+                          }
+                          className="shrink-0 rounded-full border border-[#F557BF]/20 px-3 py-1 text-[11px] font-semibold text-[#F557BF] transition hover:bg-[#F557BF]/10"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
