@@ -109,6 +109,18 @@ export default function EnrollmentPage() {
     };
   }, [photo.previewUrl]);
 
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
+
   const selectedCourse = useMemo(() => {
     const courseId = Number(form.courseId);
     return courses.find((course) => course.id === courseId) ?? null;
@@ -156,6 +168,7 @@ export default function EnrollmentPage() {
         body.message ??
           "Iscrizione salvata con successo. Puoi chiudere la pagina o inserire un'altra scheda.",
       );
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setForm(initialForm);
       setPhoto({ file: null, previewUrl: null });
       if (photoInputRef.current) {
@@ -419,25 +432,27 @@ export default function EnrollmentPage() {
                   ref={photoInputRef}
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={handlePhotoChange}
                   className="block w-full cursor-pointer rounded-2xl border border-[#F557BF]/25 bg-white px-4 py-3 text-sm text-[#3d3d3d] file:mr-4 file:rounded-xl file:border-0 file:bg-[#3d3d3d] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#585858]"
                 />
                 <p className="mt-2 text-xs text-[#666666]">
-                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Dimensione massima 5MB.
+                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Su smartphone puoi anche
+                  scattare una foto al momento. Dimensione massima 5MB.
                 </p>
                 {photo.previewUrl && (
-                  <div className="mt-4 flex items-center gap-3">
+                  <div className="mt-4 overflow-hidden rounded-3xl border border-[#F557BF]/20 bg-white shadow-sm">
                     <img
                       src={photo.previewUrl}
                       alt="Anteprima foto selezionata"
-                      className="h-16 w-16 rounded-2xl border border-[#F557BF]/20 object-cover"
+                      className="h-48 w-full object-cover sm:h-56"
                     />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[#3d3d3d]">
+                    <div className="border-t border-[#F557BF]/10 px-4 py-3">
+                      <p className="truncate text-sm font-semibold text-[#3d3d3d]">
                         {photo.file?.name}
                       </p>
                       <p className="text-xs text-[#666666]">
-                        Foto pronta per l&apos;upload
+                        Anteprima pronta per l&apos;upload
                       </p>
                     </div>
                   </div>
@@ -463,12 +478,6 @@ export default function EnrollmentPage() {
               </p>
             )}
 
-            {successMessage && (
-              <p className="mt-4 rounded-2xl border border-[#3d3d3d]/20 bg-[#3d3d3d]/5 px-4 py-3 text-sm text-[#3d3d3d]">
-                {successMessage}
-              </p>
-            )}
-
             <button
               type="submit"
               disabled={submitting}
@@ -479,6 +488,28 @@ export default function EnrollmentPage() {
           </form>
         </section>
       </main>
+
+      {successMessage && (
+        <div
+          className="fixed inset-x-0 top-4 z-50 flex justify-center px-4 sm:top-6"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="w-full max-w-xl rounded-[28px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-950 shadow-[0_24px_70px_rgba(16,185,129,0.28)] ring-2 ring-emerald-400/25 sm:px-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
+                ✓
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  Iscrizione salvata
+                </p>
+                <p className="mt-1 text-sm leading-6 text-emerald-950">{successMessage}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
