@@ -126,6 +126,7 @@ export default function Home() {
   );
   const [loadingIscritti, setLoadingIscritti] = useState(true);
   const [errorIscritti, setErrorIscritti] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -1051,6 +1052,8 @@ export default function Home() {
     }
 
     try {
+      setErrorIscritti(null);
+      setDeletingUserId(id);
       const res = await fetch(`${apiBase}/api/users/${id}`, {
         method: "DELETE",
         headers: {
@@ -1085,6 +1088,8 @@ export default function Home() {
           ? error.message
           : "Errore imprevisto durante l'eliminazione dell'iscritto.",
       );
+    } finally {
+      setDeletingUserId((current) => (current === id ? null : current));
     }
   }
 
@@ -1595,14 +1600,19 @@ export default function Home() {
                             <button
                               onClick={() => handleEdit(i)}
                               className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
+                              disabled={deletingUserId === i.id}
                             >
                               Modifica
                             </button>
                             <button
-                              onClick={() => handleDelete(i.id)}
-                              className="ml-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20"
+                              onClick={() => void handleDelete(i.id)}
+                              disabled={deletingUserId === i.id}
+                              className="ml-2 inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              Elimina
+                              {deletingUserId === i.id && (
+                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-100/30 border-t-rose-100" />
+                              )}
+                              {deletingUserId === i.id ? "Eliminazione..." : "Elimina"}
                             </button>
                           </td>
                         </tr>
