@@ -1,11 +1,17 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.middleware";
 import { upload } from "../services/upload.service";
-import { listUsers, uploadProfilePhoto } from "../controllers/user.controller";
+import {
+  deleteUser,
+  listUsers,
+  uploadProfilePhoto,
+} from "../controllers/user.controller";
 
 const router = Router();
 
 router.get("/", listUsers);
+
+router.delete("/:id", authenticateToken, deleteUser);
 
 router.post(
   "/profile-photo",

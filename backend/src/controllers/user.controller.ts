@@ -100,3 +100,90 @@ export async function uploadProfilePhoto(req: AuthRequest, res: Response) {
       .json({ error: "Errore durante l'upload", details: error.message });
   }
 }
+
+export async function deleteUser(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "Utente non autenticato" });
+    }
+
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return res.status(400).json({
+        error: "ID non valido",
+        details: "L'id dell'iscritto deve essere un numero intero positivo",
+      });
+    }
+
+    const existingUser = await prisma.users.findUnique({
+      where: { id: BigInt(userId) },
+      select: { id: true },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "Iscritto non trovato" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const organizedEvents = await tx.events.findMany({
+        where: { organizer_id: BigInt(userId) },
+        select: { id: true },
+      });
+      const organizedEventIds = organizedEvents.map((event) => event.id);
+
+      await tx.course_enrollments.deleteMany({
+        where: { user_id: BigInt(userId) },
+      });
+      await tx.event_participations.deleteMany({
+        where: { user_id: BigInt(userId) },
+      });
+      await tx.message_reads.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.notifications.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.reviews.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.user_dance_styles.deleteMany({
+        where: { user_id: BigInt(userId) },
+      });
+      await tx.video_likes.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.payments.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.conversation_participants.deleteMany({
+        where: { user_id: BigInt(userId) },
+      });
+      await tx.follows.deleteMany({ where: { follower_id: BigInt(userId) } });
+      await tx.follows.deleteMany({ where: { following_id: BigInt(userId) } });
+      await tx.transactions.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.event_participations.deleteMany({
+        where: { event_id: { in: organizedEventIds } },
+      });
+      await tx.reviews.deleteMany({
+        where: { event_id: { in: organizedEventIds } },
+      });
+      await tx.videos.deleteMany({
+        where: { event_id: { in: organizedEventIds } },
+      });
+      await tx.transactions.deleteMany({
+        where: { event_id: { in: organizedEventIds } },
+      });
+      await tx.messages.deleteMany({ where: { sender_id: BigInt(userId) } });
+      await tx.videos.deleteMany({ where: { uploader_id: BigInt(userId) } });
+      await tx.events.deleteMany({ where: { organizer_id: BigInt(userId) } });
+      await tx.teachers.deleteMany({ where: { user_id: BigInt(userId) } });
+      await tx.courses.updateMany({
+        where: { teacher_id: BigInt(userId) },
+        data: { teacher_id: null },
+      });
+      await tx.venues.updateMany({
+        where: { created_by: BigInt(userId) },
+        data: { created_by: null },
+      });
+      await tx.users.delete({ where: { id: BigInt(userId) } });
+    });
+
+    return res.json({ message: "Iscritto eliminato con successo" });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Errore durante l'eliminazione",
+      details: error.message,
+    });
+  }
+}
