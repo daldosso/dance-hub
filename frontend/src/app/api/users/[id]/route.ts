@@ -49,13 +49,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
-      const organizedEvents = await tx.events.findMany({
-        where: { organizer_id: BigInt(userId) },
-        select: { id: true },
-      });
-      const organizedEventIds = organizedEvents.map((event) => event.id);
+    const organizedEvents = await prisma.events.findMany({
+      where: { organizer_id: BigInt(userId) },
+      select: { id: true },
+    });
+    const organizedEventIds = organizedEvents.map((event) => event.id);
 
+    await prisma.$transaction(async (tx) => {
       await tx.course_enrollments.deleteMany({ where: { user_id: BigInt(userId) } });
       await tx.event_participations.deleteMany({ where: { user_id: BigInt(userId) } });
       await tx.message_reads.deleteMany({ where: { user_id: BigInt(userId) } });
@@ -95,7 +95,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
         data: { created_by: null },
       });
       await tx.users.delete({ where: { id: BigInt(userId) } });
-    });
+    }, { timeout: 20000, maxWait: 20000 });
 
     return NextResponse.json({
       message: "Iscritto eliminato con successo",

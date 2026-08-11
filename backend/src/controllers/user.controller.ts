@@ -124,13 +124,13 @@ export async function deleteUser(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Iscritto non trovato" });
     }
 
-    await prisma.$transaction(async (tx) => {
-      const organizedEvents = await tx.events.findMany({
-        where: { organizer_id: BigInt(userId) },
-        select: { id: true },
-      });
-      const organizedEventIds = organizedEvents.map((event) => event.id);
+    const organizedEvents = await prisma.events.findMany({
+      where: { organizer_id: BigInt(userId) },
+      select: { id: true },
+    });
+    const organizedEventIds = organizedEvents.map((event) => event.id);
 
+    await prisma.$transaction(async (tx) => {
       await tx.course_enrollments.deleteMany({
         where: { user_id: BigInt(userId) },
       });
@@ -176,7 +176,7 @@ export async function deleteUser(req: AuthRequest, res: Response) {
         data: { created_by: null },
       });
       await tx.users.delete({ where: { id: BigInt(userId) } });
-    });
+    }, { timeout: 20000, maxWait: 20000 });
 
     return res.json({ message: "Iscritto eliminato con successo" });
   } catch (error: any) {
