@@ -432,13 +432,13 @@ export default function EnrollmentPage() {
                   ref={photoInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={handlePhotoChange}
                   className="block w-full cursor-pointer rounded-2xl border border-[#F557BF]/25 bg-white px-4 py-3 text-sm text-[#3d3d3d] file:mr-4 file:rounded-xl file:border-0 file:bg-[#3d3d3d] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#585858]"
                 />
                 <p className="mt-2 text-xs text-[#666666]">
-                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Su smartphone puoi anche
-                  scattare una foto al momento. Dimensione massima 5MB.
+                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Su smartphone puoi
+                  scegliere una foto dalla memoria o scattarla al momento. Dimensione
+                  massima 5MB.
                 </p>
                 {photo.previewUrl && (
                   <div className="mt-4 overflow-hidden rounded-3xl border border-[#F557BF]/20 bg-white shadow-sm">
