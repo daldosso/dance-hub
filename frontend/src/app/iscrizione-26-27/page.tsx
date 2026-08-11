@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 
 type Course = {
   id: number;
@@ -21,6 +28,11 @@ type FormState = {
   consent: boolean;
 };
 
+type EnrollmentPhoto = {
+  file: File | null;
+  previewUrl: string | null;
+};
+
 const initialForm: FormState = {
   fullName: "",
   email: "",
@@ -37,14 +49,20 @@ const initialForm: FormState = {
 
 const skillLevels = ["Principiante", "Intermedio", "Avanzato"];
 const genders = ["Donna", "Uomo", "Altro", "Preferisco non dirlo"];
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
 export default function EnrollmentPage() {
   const [form, setForm] = useState<FormState>(initialForm);
+  const [photo, setPhoto] = useState<EnrollmentPhoto>({
+    file: null,
+    previewUrl: null,
+  });
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     document.title = "Iscrizione 2026/2027 | Dance Hub";
@@ -83,6 +101,14 @@ export default function EnrollmentPage() {
     void loadCourses();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (photo.previewUrl) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+    };
+  }, [photo.previewUrl]);
+
   const selectedCourse = useMemo(() => {
     const courseId = Number(form.courseId);
     return courses.find((course) => course.id === courseId) ?? null;
@@ -95,26 +121,26 @@ export default function EnrollmentPage() {
     setSuccessMessage(null);
 
     try {
-      const payload = {
-        fullName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        birthDate: form.birthDate,
-        city: form.city.trim(),
-        gender: form.gender,
-        skillLevel: form.skillLevel,
-        courseId: form.courseId ? Number(form.courseId) : undefined,
-        courseTitle: selectedCourse?.title ?? form.courseTitle.trim(),
-        notes: form.notes.trim(),
-        consent: form.consent,
-      };
+      const formData = new FormData();
+      formData.append("fullName", form.fullName.trim());
+      formData.append("email", form.email.trim());
+      formData.append("phone", form.phone.trim());
+      formData.append("birthDate", form.birthDate);
+      formData.append("city", form.city.trim());
+      formData.append("gender", form.gender);
+      formData.append("skillLevel", form.skillLevel);
+      formData.append("courseId", form.courseId);
+      formData.append("courseTitle", selectedCourse?.title ?? form.courseTitle.trim());
+      formData.append("notes", form.notes.trim());
+      formData.append("consent", String(form.consent));
+
+      if (photo.file) {
+        formData.append("profilePhoto", photo.file);
+      }
 
       const res = await fetch(getPublicApiPath("/api/public-enrollment"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const body = (await res.json().catch(() => ({}))) as {
@@ -131,6 +157,10 @@ export default function EnrollmentPage() {
           "Iscrizione salvata con successo. Puoi chiudere la pagina o inserire un'altra scheda.",
       );
       setForm(initialForm);
+      setPhoto({ file: null, previewUrl: null });
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
     } catch (error) {
       console.error(error);
       setErrorMessage(
@@ -141,6 +171,35 @@ export default function EnrollmentPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextFile = event.target.files?.[0] ?? null;
+
+    if (!nextFile) {
+      setPhoto({ file: null, previewUrl: null });
+      return;
+    }
+
+    if (!nextFile.type.startsWith("image/")) {
+      setErrorMessage("La foto deve essere un'immagine.");
+      event.target.value = "";
+      setPhoto({ file: null, previewUrl: null });
+      return;
+    }
+
+    if (nextFile.size > MAX_PHOTO_SIZE) {
+      setErrorMessage("La foto è troppo grande: massimo 5MB.");
+      event.target.value = "";
+      setPhoto({ file: null, previewUrl: null });
+      return;
+    }
+
+    setErrorMessage(null);
+    setPhoto({
+      file: nextFile,
+      previewUrl: URL.createObjectURL(nextFile),
+    });
   }
 
   return (
@@ -350,6 +409,39 @@ export default function EnrollmentPage() {
                   placeholder="Note opzionali"
                   className="w-full resize-none rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
                 />
+              </div>
+
+              <div className="sm:col-span-2 rounded-3xl border border-dashed border-[#F557BF]/30 bg-[#F557BF]/5 p-4">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                  Foto profilo
+                </label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="block w-full cursor-pointer rounded-2xl border border-[#F557BF]/25 bg-white px-4 py-3 text-sm text-[#3d3d3d] file:mr-4 file:rounded-xl file:border-0 file:bg-[#3d3d3d] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#585858]"
+                />
+                <p className="mt-2 text-xs text-[#666666]">
+                  Facoltativa. Formati consigliati: JPG, PNG o WEBP. Dimensione massima 5MB.
+                </p>
+                {photo.previewUrl && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <img
+                      src={photo.previewUrl}
+                      alt="Anteprima foto selezionata"
+                      className="h-16 w-16 rounded-2xl border border-[#F557BF]/20 object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#3d3d3d]">
+                        {photo.file?.name}
+                      </p>
+                      <p className="text-xs text-[#666666]">
+                        Foto pronta per l&apos;upload
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
