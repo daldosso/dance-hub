@@ -1020,11 +1020,71 @@ export default function Home() {
     setForm(rest);
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
     if (!confirm("Sei sicuro di voler eliminare questo iscritto?")) return;
-    setIscritti((prev) => prev.filter((i) => i.id !== id));
-    if (selezionato?.id === id) {
-      resetForm();
+
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+
+    if (typeof window === "undefined") {
+      setErrorIscritti("Eliminazione disponibile solo dal browser.");
+      return;
+    }
+
+    const rawAuth = window.localStorage.getItem(AUTH_KEY);
+    if (!rawAuth) {
+      setErrorIscritti("Sessione non trovata. Esegui di nuovo il login.");
+      return;
+    }
+
+    let token: string | undefined;
+    try {
+      const parsed = JSON.parse(rawAuth) as { token?: string };
+      token = parsed.token;
+    } catch {
+      setErrorIscritti("Dati di sessione non validi. Esegui di nuovo il login.");
+      return;
+    }
+
+    if (!token) {
+      setErrorIscritti("Token mancante. Esegui di nuovo il login.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${apiBase}/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          removeAuthAndRedirect(router);
+          return;
+        }
+
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          details?: string;
+        };
+
+        throw new Error(
+          body.details ?? body.error ?? "Errore durante l'eliminazione dell'iscritto.",
+        );
+      }
+
+      setIscritti((prev) => prev.filter((i) => i.id !== id));
+      if (selezionato?.id === id) {
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Errore eliminazione iscritto", error);
+      setErrorIscritti(
+        error instanceof Error
+          ? error.message
+          : "Errore imprevisto durante l'eliminazione dell'iscritto.",
+      );
     }
   }
 
