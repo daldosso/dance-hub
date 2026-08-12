@@ -109,6 +109,137 @@ const corsiPredefiniti = [
   "Standard & Latini",
 ];
 
+function parseItalianFullName(fullName: string): { nome: string; cognome: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return { nome: "", cognome: "" };
+  }
+
+  if (parts.length === 1) {
+    return { nome: parts[0], cognome: "" };
+  }
+
+  const cognomePrefixes = [
+    "DA",
+    "DAL",
+    "DELLA",
+    "DELL",
+    "DI",
+    "D",
+    "DEL",
+    "DE",
+    "DEI",
+    "LO",
+    "LA",
+    "LE",
+    "AN",
+    "VAN",
+    "VON",
+    "EL",
+    "LI",
+  ];
+
+  for (let i = 1; i < parts.length; i++) {
+    const potentialPrefix = parts[i].toUpperCase();
+    if (cognomePrefixes.includes(potentialPrefix)) {
+      return {
+        nome: parts.slice(0, i).join(" "),
+        cognome: parts.slice(i).join(" "),
+      };
+    }
+  }
+
+  if (parts[0].length === 1 && parts.length > 2) {
+    return {
+      nome: parts.slice(0, 2).join(" "),
+      cognome: parts.slice(2).join(" "),
+    };
+  }
+
+  return {
+    nome: parts[0],
+    cognome: parts.slice(1).join(" "),
+  };
+}
+
+function normalizeSkillLevelForStorage(level: Livello) {
+  switch (level) {
+    case "Intermedio":
+      return "intermediate";
+    case "Avanzato":
+      return "advanced";
+    default:
+      return "beginner";
+  }
+}
+
+function mapBackendSkillLevel(skillLevel: string | null | undefined): Livello {
+  const normalized = skillLevel?.trim().toLowerCase() ?? "";
+
+  if (normalized === "intermedio" || normalized === "intermediate") {
+    return "Intermedio";
+  }
+
+  if (
+    normalized === "avanzato" ||
+    normalized === "advanced" ||
+    normalized === "pro"
+  ) {
+    return "Avanzato";
+  }
+
+  return "Principiante";
+}
+
+function mapBackendUserToIscritto(
+  user: BackendUser,
+  fallbackId: number,
+): Iscritto {
+  const fullName: string = user.fullName ?? "";
+  const { nome: nomeFromName, cognome: cognomeFromName } =
+    parseItalianFullName(fullName);
+
+  const courseTitle =
+    Array.isArray(user.courses) && user.courses.length > 0
+      ? user.courses[0]?.title ?? ""
+      : "";
+  const danceStyleFallback =
+    Array.isArray(user.danceStyles) && user.danceStyles.length > 0
+      ? user.danceStyles[0] ?? ""
+      : "";
+
+  return {
+    id: typeof user.id === "number" ? user.id : fallbackId,
+    nome: nomeFromName || "N/D",
+    cognome: cognomeFromName || "N/D",
+    email: typeof user.email === "string" ? user.email : "",
+    telefono: "",
+    corso:
+      courseTitle ||
+      danceStyleFallback ||
+      (typeof user.city === "string" ? user.city : "Non specificato"),
+    livello: mapBackendSkillLevel(user.skillLevel),
+    stato: "Attivo",
+    note: undefined,
+    photoUrl:
+      typeof user.profilePictureUrl === "string"
+        ? user.profilePictureUrl
+        : undefined,
+    courseIds:
+      Array.isArray(user.courses) && user.courses.length > 0
+        ? user.courses.map((course) => Number(course.id))
+        : [],
+  };
+}
+
+function buildFormFromIscritto(iscritto: Iscritto): Omit<Iscritto, "id"> {
+  // Manteniamo la stessa shape del form, togliendo solo l'id tecnico.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, ...rest } = iscritto;
+  return rest;
+}
+
 function removeAuthAndRedirect(router: ReturnType<typeof useRouter>) {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_KEY);
@@ -306,58 +437,9 @@ export default function Home() {
           return;
         }
 
-        const mapped: Iscritto[] = users.map((u, index) => {
-          const fullName: string = u.fullName ?? "";
-          const { nome: nomeFromName, cognome: cognomeFromName } = parseItalianFullName(fullName);
-
-          const skill: string | null =
-            typeof u.skillLevel === "string" ? u.skillLevel : null;
-          const livello: Livello =
-            skill === "intermediate"
-              ? "Intermedio"
-              : skill === "advanced" || skill === "pro"
-                ? "Avanzato"
-                : "Principiante";
-
-          const stato: StatoIscrizione = "Attivo";
-
-          const danceStyles: string[] = Array.isArray(u.danceStyles)
-            ? u.danceStyles
-            : [];
-
-          const courseIds =
-            Array.isArray(u.courses) && u.courses.length > 0
-              ? u.courses.map((c) => Number(c.id))
-              : [];
-
-          const corsoDaCourses =
-            Array.isArray(u.courses) && u.courses.length > 0
-              ? u.courses[0]?.title ?? ""
-              : "";
-
-          const primoStileFallback =
-            danceStyles[0] ??
-            (typeof u.city === "string" ? u.city : "Non specificato");
-
-          const corso = corsoDaCourses || primoStileFallback;
-
-          return {
-            id: typeof u.id === "number" ? u.id : index + 1,
-            nome: nomeFromName || "N/D",
-            cognome: cognomeFromName || "N/D",
-            email: typeof u.email === "string" ? u.email : "",
-            telefono: "",
-            corso,
-            livello,
-            stato,
-            note: undefined,
-            photoUrl:
-              typeof u.profilePictureUrl === "string"
-                ? u.profilePictureUrl
-                : undefined,
-            courseIds,
-          };
-        });
+        const mapped: Iscritto[] = users.map((u, index) =>
+          mapBackendUserToIscritto(u, index + 1),
+        );
 
         setIscritti(mapped);
       } catch (err) {
@@ -982,7 +1064,7 @@ export default function Home() {
     setSelezionato(null);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!form.nome.trim() || !form.cognome.trim() || !form.corso.trim()) {
@@ -991,34 +1073,109 @@ export default function Home() {
     }
 
     if (selezionato) {
-      setIscritti((prev) =>
-        prev.map((i) =>
-          i.id === selezionato.id
-            ? {
-                ...i,
-                ...form,
-              }
-            : i,
-        ),
-      );
-    } else {
-      setIscritti((prev) => [
-        ...prev,
-        {
-          id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-          ...form,
-        },
-      ]);
+      if (typeof window === "undefined") {
+        setErrorIscritti("Salvataggio disponibile solo dal browser.");
+        return;
+      }
+
+      const rawAuth = window.localStorage.getItem(AUTH_KEY);
+      if (!rawAuth) {
+        setErrorIscritti("Sessione non trovata. Esegui di nuovo il login.");
+        return;
+      }
+
+      let token: string | undefined;
+      try {
+        const parsed = JSON.parse(rawAuth) as { token?: string };
+        token = parsed.token;
+      } catch {
+        setErrorIscritti("Dati di sessione non validi. Esegui di nuovo il login.");
+        return;
+      }
+
+      if (!token) {
+        setErrorIscritti("Token mancante. Esegui di nuovo il login.");
+        return;
+      }
+
+      try {
+        setErrorIscritti(null);
+
+        const res = await fetch(`/api/users/${selezionato.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...form,
+            livello: normalizeSkillLevelForStorage(form.livello),
+          }),
+        });
+
+        if (!res.ok) {
+          if (res.status === 403) {
+            removeAuthAndRedirect(router);
+            return;
+          }
+
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            details?: string;
+          };
+
+          throw new Error(
+            body.details ?? body.error ?? "Errore durante il salvataggio delle modifiche.",
+          );
+        }
+
+        const body = (await res.json()) as { user?: BackendUser };
+        if (body.user) {
+          const updated = mapBackendUserToIscritto(body.user, selezionato.id);
+          setIscritti((prev) =>
+            prev.map((i) => (i.id === selezionato.id ? updated : i)),
+          );
+          setSelezionato(updated);
+        } else {
+          setIscritti((prev) =>
+            prev.map((i) =>
+              i.id === selezionato.id
+                ? {
+                    ...i,
+                    ...form,
+                  }
+                : i,
+            ),
+          );
+        }
+
+        resetForm();
+        return;
+      } catch (error) {
+        console.error("Errore aggiornamento iscritto", error);
+        setErrorIscritti(
+          error instanceof Error
+            ? error.message
+            : "Errore imprevisto durante il salvataggio delle modifiche.",
+        );
+        return;
+      }
     }
+
+    setIscritti((prev) => [
+      ...prev,
+      {
+        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+        ...form,
+      },
+    ]);
 
     resetForm();
   }
 
   function handleEdit(iscritto: Iscritto) {
     setSelezionato(iscritto);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...rest } = iscritto;
-    setForm(rest);
+    setForm(buildFormFromIscritto(iscritto));
   }
 
   async function handleDelete(id: number) {
