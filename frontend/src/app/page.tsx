@@ -38,6 +38,7 @@ type BackendUser = {
   city: string | null;
   danceStyles: string[] | null;
   skillLevel: string | null;
+  status: string | null;
   isTeacher: boolean | null;
   isOrganizer: boolean | null;
   profilePictureUrl: string | null;
@@ -192,6 +193,20 @@ function mapBackendSkillLevel(skillLevel: string | null | undefined): Livello {
   return "Principiante";
 }
 
+function mapBackendStatus(status: string | null | undefined): StatoIscrizione {
+  const normalized = status?.trim().toLowerCase() ?? "";
+
+  if (normalized === "in sospeso" || normalized === "suspended") {
+    return "In sospeso";
+  }
+
+  if (normalized === "arretrato" || normalized === "overdue") {
+    return "Arretrato";
+  }
+
+  return "Attivo";
+}
+
 function mapBackendUserToIscritto(
   user: BackendUser,
   fallbackId: number,
@@ -220,7 +235,7 @@ function mapBackendUserToIscritto(
       danceStyleFallback ||
       (typeof user.city === "string" ? user.city : "Non specificato"),
     livello: mapBackendSkillLevel(user.skillLevel),
-    stato: "Attivo",
+    stato: mapBackendStatus(user.status),
     note: undefined,
     photoUrl:
       typeof user.profilePictureUrl === "string"
@@ -1110,6 +1125,7 @@ export default function Home() {
           body: JSON.stringify({
             ...form,
             livello: normalizeSkillLevelForStorage(form.livello),
+            stato: form.stato,
           }),
         });
 

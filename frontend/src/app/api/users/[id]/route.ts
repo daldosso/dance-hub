@@ -16,6 +16,7 @@ type UpdateUserBody = {
   email?: unknown;
   corso?: unknown;
   livello?: unknown;
+  stato?: unknown;
   note?: unknown;
   dataNascita?: unknown;
   luogoNascita?: unknown;
@@ -71,6 +72,7 @@ async function serializeUser(userId: number) {
       city: true,
       dance_styles: true,
       skill_level: true,
+      status: true,
       profile_picture_url: true,
       course_enrollments: {
         select: {
@@ -105,6 +107,7 @@ async function serializeUser(userId: number) {
     city: user.city,
     danceStyles: user.dance_styles,
     skillLevel: user.skill_level,
+    status: user.status,
     profilePictureUrl: user.profile_picture_url,
     courses: courses.map((course) => ({
       id: Number(course.id),
@@ -138,6 +141,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const email = getTrimmedString(raw.email);
     const corso = getTrimmedString(raw.corso);
     const livello = getTrimmedString(raw.livello);
+    const stato = getTrimmedString(raw.stato);
 
     if (!nome || !cognome || !corso) {
       return NextResponse.json(
@@ -194,6 +198,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     });
 
     const skillLevel = normalizeSkillLevel(livello);
+    const status = stato || "Attivo";
     const fullName = `${nome} ${cognome}`.trim();
     const notes = getNullableString(raw.note);
     const birthDate = parseDateValue(raw.dataNascita);
@@ -212,6 +217,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
           gender: gender ?? undefined,
           dance_styles: [corso],
           skill_level: skillLevel ?? undefined,
+          status,
           updated_at: new Date(),
         },
       });
