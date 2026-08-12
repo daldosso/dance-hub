@@ -9,6 +9,7 @@ import eventRoutes from "./routes/events.routes";
 import venueRoutes from "./routes/venues.routes";
 import courseRoutes from "./routes/courses.routes";
 import paymentRoutes from "./routes/payments.routes";
+import { ensureUserStatusColumn } from "./lib/ensure-user-status-column";
 
 dotenv.config();
 
@@ -37,9 +38,18 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Dance-Hub API avviata su http://localhost:${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+async function bootstrap() {
+  await ensureUserStatusColumn(prisma);
+
+  app.listen(port, () => {
+    console.log(`🚀 Dance-Hub API avviata su http://localhost:${port}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+  });
+}
+
+void bootstrap().catch((error: unknown) => {
+  console.error("Errore durante l'avvio dell'API:", error);
+  process.exit(1);
 });
 
 // Graceful shutdown

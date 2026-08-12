@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureUserStatusColumn } from "@/lib/ensure-user-status-column";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
+    await ensureUserStatusColumn();
+
     const users = await prisma.users.findMany({
       select: {
         id: true,

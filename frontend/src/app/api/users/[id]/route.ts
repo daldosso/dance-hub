@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { ensureUserStatusColumn } from "@/lib/ensure-user-status-column";
 
 export const runtime = "nodejs";
 
@@ -123,6 +124,8 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 
   try {
+    await ensureUserStatusColumn();
+
     const userId = Number(context.params.id);
 
     if (!Number.isInteger(userId) || userId < 1) {
