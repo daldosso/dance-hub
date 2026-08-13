@@ -288,15 +288,12 @@ export default function EnrollmentPage() {
             <img
               src="/iscrizione-academy-logo.png"
               alt="Tommy & Laura Academy by Latin Charm"
-              className="h-auto w-full max-w-[560px] object-contain"
+              className="h-auto w-full max-w-[300px] object-contain"
             />
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#F557BF]">
                 Iscrizione 2026 / 2027
               </p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#3d3d3d] sm:text-3xl">
-                Iscrizione Latin Charm
-              </h1>
             </div>
           </div>
         </header>
