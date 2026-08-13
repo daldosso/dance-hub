@@ -286,7 +286,7 @@ export default function EnrollmentPage() {
         <header className="overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.14)]">
           <div className="flex flex-col items-center gap-4 px-5 py-5 text-center sm:px-8 sm:py-6">
             <img
-              src="/iscrizione-academy-logo.svg"
+              src="/iscrizione-academy-logo.jpg"
               alt="Tommy & Laura Academy by Latin Charm"
               className="h-auto w-full max-w-[560px] object-contain"
             />
