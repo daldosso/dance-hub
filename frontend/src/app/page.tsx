@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Camera, CreditCard, Pencil, Printer, Trash2 } from "lucide-react";
 
 type Livello = "Principiante" | "Intermedio" | "Avanzato";
 type StatoIscrizione = "Attivo" | "In sospeso" | "Arretrato";
@@ -386,6 +387,18 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         margin-bottom: 18px;
       }
 
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 58px;
+        height: 58px;
+        object-fit: contain;
+      }
+
       .brand {
         font-size: 12px;
         letter-spacing: 0.14em;
@@ -553,10 +566,13 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
   <body>
     <div class="sheet">
       <section class="header">
-        <div>
-          <div class="brand">Dance Hub</div>
-          <h1 class="title">Modulo di iscrizione</h1>
-          <p class="subtitle">Scheda riepilogativa per stampa dell'iscritto selezionato.</p>
+        <div class="brand-lockup">
+          <img class="brand-logo" src="/iscrizione-academy-logo.png" alt="Latin Charm Academy" />
+          <div>
+            <div class="brand">Latin Charm</div>
+            <h1 class="title">Modulo di iscrizione</h1>
+            <p class="subtitle">Scheda riepilogativa per stampa dell'iscritto selezionato.</p>
+          </div>
         </div>
         <div class="meta">
           Stampato il
@@ -1788,11 +1804,23 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 lg:px-10">
         <header className="mb-4 border-b border-white/10 pb-3 sm:mb-6 sm:pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-                  Dance Hub
-                </h1>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <img
+                src="/iscrizione-academy-logo.png"
+                alt="Latin Charm Academy"
+                className="h-14 w-14 rounded-lg bg-white object-contain p-1 shadow-lg ring-1 ring-white/20 sm:h-16 sm:w-16"
+              />
+              <div>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink-300">
+                      Latin Charm
+                    </p>
+                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                      Dance Hub
+                    </h1>
+                  </div>
+                </div>
                 {loadingIscritti && (
                   <span
                     className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-400/60 border-t-transparent"
@@ -1847,9 +1875,11 @@ export default function Home() {
               <div className="hidden justify-end sm:flex">
                 <Link
                   href="/payments"
-                  className="inline-flex items-center justify-center rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-100 shadow-sm transition hover:bg-sky-500/20 sm:text-sm"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sky-400/40 bg-sky-500/10 text-sky-100 shadow-sm transition hover:bg-sky-500/20"
+                  aria-label="Pagamenti"
+                  title="Pagamenti"
                 >
-                  Pagamenti
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
             </div>
@@ -2028,8 +2058,9 @@ export default function Home() {
                               }}
                               disabled={photoUploading}
                               aria-label="Carica foto"
+                              title="Carica foto"
                             >
-                              📷
+                              <Camera className="h-4 w-4" aria-hidden="true" />
                             </button>
 
                             <button
@@ -2040,8 +2071,9 @@ export default function Home() {
                                 handlePrintEnrollment(i);
                               }}
                               aria-label="Stampa modulo"
+                              title="Stampa modulo"
                             >
-                              🖨️
+                              <Printer className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         </li>
@@ -2181,8 +2213,10 @@ export default function Home() {
                               }}
                               className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
                               disabled={deletingUserId === i.id}
+                              aria-label={`Modifica ${i.nome} ${i.cognome}`}
+                              title="Modifica"
                             >
-                              Modifica
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <button
                               type="button"
@@ -2192,11 +2226,15 @@ export default function Home() {
                               }}
                               disabled={deletingUserId === i.id}
                               className="ml-2 inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              aria-label={`Elimina ${i.nome} ${i.cognome}`}
+                              title="Elimina"
                             >
                               {deletingUserId === i.id && (
                                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-100/30 border-t-rose-100" />
                               )}
-                              {deletingUserId === i.id ? "Eliminazione..." : "Elimina"}
+                              {deletingUserId !== i.id && (
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              )}
                             </button>
                             <button
                               type="button"
@@ -2205,8 +2243,10 @@ export default function Home() {
                                 handlePrintEnrollment(i);
                               }}
                               className="ml-2 inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-medium text-emerald-100 hover:bg-emerald-500/20"
+                              aria-label={`Stampa modulo di ${i.nome} ${i.cognome}`}
+                              title="Stampa modulo"
                             >
-                              Stampa modulo
+                              <Printer className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </td>
                         </tr>
