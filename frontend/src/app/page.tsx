@@ -255,6 +255,390 @@ function buildFormFromIscritto(iscritto: Iscritto): Omit<Iscritto, "id"> {
   return rest;
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return character;
+    }
+  });
+}
+
+function formatPrintValue(value?: string | null) {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 0 ? normalized : "—";
+}
+
+function formatPrintDate(value?: string | null) {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) {
+    return "—";
+  }
+
+  const isoDateMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDateMatch) {
+    const [, year, month, day] = isoDateMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function buildEnrollmentPrintHtml(iscritto: Iscritto) {
+  const fullName = `${iscritto.nome} ${iscritto.cognome}`.trim();
+  const rows = [
+    ["Nome", iscritto.nome],
+    ["Cognome", iscritto.cognome],
+    ["Email", iscritto.email],
+    ["Telefono", iscritto.telefono],
+    ["Corso", iscritto.corso],
+    ["Livello", iscritto.livello],
+    ["Stato", iscritto.stato],
+    ["Data di nascita", formatPrintDate(iscritto.dataNascita)],
+    ["Luogo di nascita", formatPrintValue(iscritto.luogoNascita)],
+    ["Codice fiscale", formatPrintValue(iscritto.codiceFiscale)],
+    ["Sesso", formatPrintValue(iscritto.sesso)],
+    ["Numero documento", formatPrintValue(iscritto.numeroDocumento)],
+    ["Note", formatPrintValue(iscritto.note)],
+  ];
+
+  const rowsHtml = rows
+    .map(
+      ([label, value]) => `
+        <div class="field">
+          <div class="label">${escapeHtml(label)}</div>
+          <div class="value">${escapeHtml(value)}</div>
+        </div>
+      `,
+    )
+    .join("");
+
+  const photoHtml = iscritto.photoUrl
+    ? `
+      <div class="photo-card">
+        <img src="${escapeHtml(iscritto.photoUrl)}" alt="${escapeHtml(fullName)}" />
+      </div>
+    `
+    : `
+      <div class="photo-card photo-placeholder">
+        <span>${escapeHtml((iscritto.nome?.[0] ?? "") + (iscritto.cognome?.[0] ?? ""))}</span>
+      </div>
+    `;
+
+  return `<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Modulo iscrizione - ${escapeHtml(fullName || "Iscritto")}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        color: #111827;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .sheet {
+        min-height: calc(100vh - 24mm);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        border-bottom: 2px solid #111827;
+        padding-bottom: 14px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin-bottom: 6px;
+      }
+
+      .title {
+        font-size: 24px;
+        line-height: 1.15;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .subtitle {
+        margin: 6px 0 0;
+        color: #4b5563;
+        font-size: 12px;
+      }
+
+      .meta {
+        text-align: right;
+        font-size: 11px;
+        color: #4b5563;
+        min-width: 170px;
+      }
+
+      .meta strong {
+        display: block;
+        color: #111827;
+        font-size: 13px;
+        margin-top: 2px;
+      }
+
+      .top-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .panel {
+        border: 1px solid #d1d5db;
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      .panel-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        margin: 0 0 10px;
+      }
+
+      .identity {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .identity-name {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .identity-line {
+        font-size: 13px;
+        color: #374151;
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .photo-card {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .photo-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .photo-placeholder span {
+        font-size: 42px;
+        font-weight: 700;
+        color: #9ca3af;
+      }
+
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .field {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 10px 12px;
+        break-inside: avoid;
+      }
+
+      .label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        margin-bottom: 4px;
+      }
+
+      .value {
+        font-size: 13px;
+        line-height: 1.45;
+        color: #111827;
+        min-height: 18px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .notes {
+        margin-top: 14px;
+      }
+
+      .signature {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .signature-line {
+        border-top: 1px solid #9ca3af;
+        padding-top: 8px;
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      .footer {
+        margin-top: 18px;
+        font-size: 10px;
+        color: #6b7280;
+      }
+
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <section class="header">
+        <div>
+          <div class="brand">Dance Hub</div>
+          <h1 class="title">Modulo di iscrizione</h1>
+          <p class="subtitle">Scheda riepilogativa per stampa dell'iscritto selezionato.</p>
+        </div>
+        <div class="meta">
+          Stampato il
+          <strong>${escapeHtml(
+            new Intl.DateTimeFormat("it-IT", {
+              dateStyle: "full",
+              timeStyle: "short",
+            }).format(new Date()),
+          )}</strong>
+        </div>
+      </section>
+
+      <section class="top-grid">
+        <div class="panel">
+          <h2 class="panel-title">Anagrafica</h2>
+          <div class="identity">
+            <p class="identity-name">${escapeHtml(fullName || "N/D")}</p>
+            <p class="identity-line">Corso: ${escapeHtml(formatPrintValue(iscritto.corso))}</p>
+            <p class="identity-line">Livello: ${escapeHtml(formatPrintValue(iscritto.livello))}</p>
+            <p class="identity-line">Stato: ${escapeHtml(formatPrintValue(iscritto.stato))}</p>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="panel-title">Foto</h2>
+          ${photoHtml}
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Dati iscrizione</h2>
+        <div class="fields">
+          ${rowsHtml}
+        </div>
+      </section>
+
+      <section class="panel notes">
+        <h2 class="panel-title">Note</h2>
+        <div class="value">${escapeHtml(formatPrintValue(iscritto.note))}</div>
+      </section>
+
+      <section class="signature">
+        <div class="signature-line">Firma del corsista</div>
+        <div class="signature-line">Firma della segreteria</div>
+      </section>
+
+      <div class="footer">
+        Documento generato automaticamente da Dance Hub.
+      </div>
+    </div>
+    <script>
+      window.addEventListener('load', function () {
+        window.focus();
+        setTimeout(function () {
+          window.print();
+        }, 250);
+      });
+      window.addEventListener('afterprint', function () {
+        window.close();
+      });
+    </script>
+  </body>
+</html>`;
+}
+
+function openEnrollmentPrintWindow(iscritto: Iscritto) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const printWindow = window.open("", "_blank", "width=900,height=1200");
+  if (!printWindow) {
+    return false;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(buildEnrollmentPrintHtml(iscritto));
+  printWindow.document.close();
+  printWindow.focus();
+
+  return true;
+}
+
 function removeAuthAndRedirect(router: ReturnType<typeof useRouter>) {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_KEY);
@@ -1266,6 +1650,13 @@ export default function Home() {
     }
   }
 
+  function handlePrintEnrollment(iscritto: Iscritto) {
+    const opened = openEnrollmentPrintWindow(iscritto);
+    if (!opened) {
+      setErrorIscritti("Impossibile aprire la finestra di stampa. Controlla il blocco popup.");
+    }
+  }
+
   function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setPhotoError(null);
@@ -1640,6 +2031,18 @@ export default function Home() {
                             >
                               📷
                             </button>
+
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-500/10 text-slate-100 hover:bg-emerald-500/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePrintEnrollment(i);
+                              }}
+                              aria-label="Stampa modulo"
+                            >
+                              🖨️
+                            </button>
                           </div>
                         </li>
                       );
@@ -1771,14 +2174,22 @@ export default function Home() {
                           </td>
                           <td className="px-3 py-2 text-right text-sm sm:text-base sm:px-4 sm:py-3">
                             <button
-                              onClick={() => handleEdit(i)}
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleEdit(i);
+                              }}
                               className="rounded-md border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-100 hover:bg-sky-500/20"
                               disabled={deletingUserId === i.id}
                             >
                               Modifica
                             </button>
                             <button
-                              onClick={() => void handleDelete(i.id)}
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDelete(i.id);
+                              }}
                               disabled={deletingUserId === i.id}
                               className="ml-2 inline-flex items-center gap-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 font-medium text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             >
@@ -1786,6 +2197,16 @@ export default function Home() {
                                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-100/30 border-t-rose-100" />
                               )}
                               {deletingUserId === i.id ? "Eliminazione..." : "Elimina"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handlePrintEnrollment(i);
+                              }}
+                              className="ml-2 inline-flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-medium text-emerald-100 hover:bg-emerald-500/20"
+                            >
+                              Stampa modulo
                             </button>
                           </td>
                         </tr>
