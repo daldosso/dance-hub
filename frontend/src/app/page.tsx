@@ -367,7 +367,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .sheet {
-        min-height: 277mm;
+        min-height: 0;
       }
 
       .title {
@@ -387,8 +387,14 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .header-box {
         border: 1px solid #222;
-        padding: 5px;
+        padding: 3px;
         font-size: 8px;
+      }
+
+      .header-box strong {
+        display: block;
+        font-size: 13px;
+        line-height: 1.1;
       }
 
       .header-box.tall {
@@ -405,7 +411,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .header-row > div {
         border-top: 1px solid #222;
-        padding: 6px 5px;
+        padding: 4px 3px;
       }
 
       .email-box {
@@ -427,9 +433,9 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .form-field {
-        min-height: 15mm;
+        min-height: 12mm;
         border-right: 1px solid #222;
-        padding: 5px 7px;
+        padding: 3px 5px;
       }
 
       .form-field:last-child {
@@ -448,8 +454,8 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .field-value {
         display: block;
-        min-height: 13px;
-        padding-top: 3px;
+        min-height: 11px;
+        padding-top: 2px;
         font-size: 10px;
         font-weight: 600;
       }
@@ -466,26 +472,26 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .declaration {
-        margin-top: 8px;
+        margin-top: 5px;
         font-size: 9px;
-        line-height: 1.22;
+        line-height: 1.18;
       }
 
       .declaration p {
-        margin: 0 0 5px;
+        margin: 0 0 3px;
       }
 
       .declaration strong {
         display: block;
         text-align: center;
-        margin: 6px 0 4px;
+        margin: 4px 0 2px;
       }
 
       .consent-line {
         display: flex;
         gap: 16px;
         justify-content: center;
-        margin: 4px 0;
+        margin: 2px 0;
       }
 
       .consent-option {
@@ -505,8 +511,8 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         display: grid;
         grid-template-columns: 1fr 1.7fr;
         gap: 35px;
-        margin-top: 9px;
-        padding: 0 10px;
+        margin-top: 6px;
+        padding: 0 6px;
       }
 
       .signature-line {
@@ -516,7 +522,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .minor {
-        margin-top: 14px;
+        margin-top: 9px;
         border-top: 1px solid #222;
         padding-top: 5px;
         font-size: 9px;
@@ -530,16 +536,16 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       .privacy-title {
         text-align: center;
         font-size: 16px;
-        margin: 4px 0 18px;
+        margin: 2px 0 10px;
       }
 
       .privacy-copy {
-        font-size: 9.2px;
-        line-height: 1.25;
+        font-size: 8.8px;
+        line-height: 1.18;
       }
 
       .privacy-copy p {
-        margin: 0 0 6px;
+        margin: 0 0 4px;
       }
 
       .privacy-copy ol {
@@ -549,7 +555,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .privacy-copy li {
         padding-left: 3px;
-        margin-bottom: 5px;
+        margin-bottom: 3px;
       }
 
       @media print {
