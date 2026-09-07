@@ -318,12 +318,6 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       <span class="field-label">${escapeHtml(label)}</span>
       <span class="field-value">${escapeHtml(formatPrintValue(value))}</span>
     </div>`;
-  const identitySummary = `
-    <div class="identity-summary">
-      ${field("Codice fiscale", iscritto.codiceFiscale)}
-      ${field("Data di nascita", formatPrintDate(iscritto.dataNascita))}
-    </div>`;
-
   const checkbox = (label: string) => `
     <span class="consent-option"><span class="checkbox"></span>${label}</span>`;
 
@@ -394,18 +388,6 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         line-height: 1;
         font-weight: 700;
         margin: 5px 0 9px;
-      }
-
-      .identity-summary {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0;
-        border: 1px solid #222;
-        border-bottom: 0;
-      }
-
-      .identity-summary .form-field {
-        min-height: 12mm;
       }
 
       .top-header {
@@ -627,7 +609,6 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       </div>
 
       <h1 class="title">SCHEDA TESSERATO STAGIONE SPORTIVA 2026/2027</h1>
-      ${identitySummary}
 
       <div class="form-section two">
         ${field("Cognome", iscritto.cognome)}
