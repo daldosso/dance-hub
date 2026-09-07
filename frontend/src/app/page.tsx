@@ -399,8 +399,9 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .header-box strong {
         display: block;
-        font-size: 19px;
-        line-height: 1.1;
+        text-align: center;
+        font-size: 22px;
+        line-height: 1.05;
       }
 
       .header-box.tall {
