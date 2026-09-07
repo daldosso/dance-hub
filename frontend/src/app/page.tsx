@@ -418,7 +418,10 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .header-row > div {
         border-top: 1px solid #222;
-        padding: 4px 3px;
+        min-height: 12mm;
+        display: flex;
+        align-items: center;
+        padding: 5px 6px;
       }
 
       .email-box {
