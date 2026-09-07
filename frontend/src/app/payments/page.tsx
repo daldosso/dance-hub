@@ -165,7 +165,31 @@ export default function PaymentsPage() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${apiBase}/api/users`);
+        const rawAuth = window.localStorage.getItem(AUTH_KEY);
+        if (!rawAuth) {
+          removeAuthAndRedirect(router);
+          return;
+        }
+
+        let token: string | undefined;
+        try {
+          const parsed = JSON.parse(rawAuth) as { token?: string };
+          token = parsed.token;
+        } catch {
+          removeAuthAndRedirect(router);
+          return;
+        }
+
+        if (!token) {
+          removeAuthAndRedirect(router);
+          return;
+        }
+
+        const res = await fetch(`${apiBase}/api/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!res.ok) {
           if (res.status === 403) {
             removeAuthAndRedirect(router);

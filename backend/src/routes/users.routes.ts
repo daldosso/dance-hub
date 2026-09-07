@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-router.get("/", listUsers);
+router.get("/", authenticateToken, listUsers);
 
 router.delete("/:id", authenticateToken, deleteUser);
 
