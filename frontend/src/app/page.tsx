@@ -518,7 +518,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         display: grid;
         grid-template-columns: 1fr 1.7fr;
         gap: 35px;
-        margin-top: 16px;
+        margin-top: 28px;
         padding: 0 10px;
       }
 
