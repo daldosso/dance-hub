@@ -548,22 +548,29 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .privacy-copy {
+        min-height: 255mm;
+        display: flex;
+        flex-direction: column;
         font-size: 8.8px;
-        line-height: 1.18;
+        line-height: 1.25;
       }
 
       .privacy-copy p {
-        margin: 0 0 4px;
+        margin: 0 0 7px;
       }
 
       .privacy-copy ol {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
         margin: 3px 0 0 19px;
         padding: 0;
       }
 
       .privacy-copy li {
         padding-left: 3px;
-        margin-bottom: 3px;
+        margin-bottom: 0;
       }
 
       @media print {
