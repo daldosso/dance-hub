@@ -306,44 +306,37 @@ function formatPrintDate(value?: string | null) {
 
 function buildEnrollmentPrintHtml(iscritto: Iscritto) {
   const fullName = `${iscritto.nome} ${iscritto.cognome}`.trim();
-  const rows = [
-    ["Nome", iscritto.nome],
-    ["Cognome", iscritto.cognome],
-    ["Email", iscritto.email],
-    ["Telefono", iscritto.telefono],
-    ["Corso", iscritto.corso],
-    ["Livello", iscritto.livello],
-    ["Stato", iscritto.stato],
-    ["Data di nascita", formatPrintDate(iscritto.dataNascita)],
-    ["Luogo di nascita", formatPrintValue(iscritto.luogoNascita)],
-    ["Codice fiscale", formatPrintValue(iscritto.codiceFiscale)],
-    ["Sesso", formatPrintValue(iscritto.sesso)],
-    ["Numero documento", formatPrintValue(iscritto.numeroDocumento)],
-    ["Note", formatPrintValue(iscritto.note)],
+  const field = (label: string, value?: string | null, className = "") => `
+    <div class="form-field ${className}">
+      <span class="field-label">${escapeHtml(label)}</span>
+      <span class="field-value">${escapeHtml(formatPrintValue(value))}</span>
+    </div>`;
+
+  const checkbox = (label: string) => `
+    <span class="consent-option"><span class="checkbox"></span>${label}</span>`;
+
+  const gdprParagraphs = [
+    "Il Regolamento UE/2016/679 \"General Data Protection Regulation\" (in seguito GDPR), di immediata applicazione anche in Italia, prevede la tutela delle persone e di altri soggetti rispetto al trattamento dei propri dati personali.",
+    "Nel rispetto della normativa indicata, il trattamento effettuato dalla nostra associazione/società sarà improntato ai principi di correttezza, liceità, trasparenza e tutela della Sua riservatezza e dei Suoi diritti.",
+    "Ai sensi dell'articolo 13 del GDPR, comunichiamo quanto segue:",
   ];
 
-  const rowsHtml = rows
-    .map(
-      ([label, value]) => `
-        <div class="field">
-          <div class="label">${escapeHtml(label)}</div>
-          <div class="value">${escapeHtml(value)}</div>
-        </div>
-      `,
-    )
-    .join("");
-
-  const photoHtml = iscritto.photoUrl
-    ? `
-      <div class="photo-card">
-        <img src="${escapeHtml(iscritto.photoUrl)}" alt="${escapeHtml(fullName)}" />
-      </div>
-    `
-    : `
-      <div class="photo-card photo-placeholder">
-        <span>${escapeHtml((iscritto.nome?.[0] ?? "") + (iscritto.cognome?.[0] ?? ""))}</span>
-      </div>
-    `;
+  const gdprItems = [
+    "I dati personali e i recapiti della Lei forniti verranno trattati, dietro Suo consenso espresso, con la firma della scheda sottoscritta/tesserato, per il legittimo interesse della nostra associazione/società ad effettuare: il tesseramento nel libro degli associati e/o elenco dei tesserati; il tesseramento presso la FSN e/o la DSA e/o l'EPS cui la nostra associazione/società è affiliata o intenderà affiliarsi; ci per ogni altro utilizzo della presente associazione e di tesseramento presso più enti.",
+    "I dati personali verranno trattati nel rispetto delle norme di legge applicabili alle attività della nostra associazione/società, comprese le norme in materia di privacy, sicurezza e tesseramento sportivo.",
+    "Legittimi interessi del trattamento sono da individuare nell'ambito delle finalità sopra indicate, con la possibilità di applicare agevolazioni fiscali spettanti, nonché la possibilità di partecipare alle attività organizzate/autorizzate dagli enti citati ai precedenti punti.",
+    "Il trattamento sarà effettuato con l'impiego di strumenti informatici e telematici, con modalità organizzative e logiche strettamente correlate alle finalità sopra indicate. I dati potranno essere comunicati a enti, federazioni, società assicurative, consulenti e soggetti che collaborano con l'associazione/società.",
+    "I dati personali saranno conservati per tutto il tempo indispensabile ad una corretta tenuta del libro associati/elenco tesserati e/o per procedere alle formalità richieste da CONI, FSN, DSA, EPS e dagli enti ai quali l'associazione/società è affiliata o intenderà affiliarsi.",
+    "Il conferimento dei dati è necessario per il raggiungimento delle finalità dello statuto dell'associazione/società e sono quindi indispensabili per l'accoglimento della sua domanda di ammissione ad associato e/o per il tesseramento presso gli enti indicati.",
+    "I dati anagrafici potranno essere comunicati a terzi tesserati, assicurazioni, enti e soggetti autorizzati per le finalità istituzionali e sportive dell'associazione/società.",
+    "Il trattamento non riguarda categorie particolari di dati personali, salvo il caso in cui siano necessari dati relativi all'origine etnica, alle convinzioni religiose, filosofiche, politiche o sindacali, allo stato di salute e alla vita sessuale. Gli eventuali dati saranno conservati a cura del legale rappresentante.",
+    "Il titolare del trattamento è la nostra associazione/società indicata in intestazione.",
+    "Il responsabile del trattamento è il legale rappresentante della stessa associazione/società indicato in intestazione.",
+    "Nella sua qualità di interessato, in relazione ai trattamenti sopradetti, in ogni momento Lei potrà esercitare i Suoi diritti di cui agli articoli 15, 16, 17 e 77 GDPR.",
+    "Lei ha il diritto di revocare in qualsiasi momento senza pregiudicare la liceità del trattamento basata sul consenso prestato prima della revoca.",
+    "Lei ha il diritto di proporre reclamo al Garante per la protezione dei dati personali.",
+    "Non esiste alcun processo decisionale automatizzato, né alcuna attività di profilazione di cui all'articolo 22, paragrafi 1 e 4 del GDPR.",
+  ];
 
   return `<!doctype html>
 <html lang="it">
@@ -354,7 +347,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
     <style>
       @page {
         size: A4;
-        margin: 12mm;
+        margin: 10mm;
       }
 
       * {
@@ -365,194 +358,198 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         margin: 0;
         padding: 0;
         background: #fff;
-        color: #111827;
+        color: #171717;
         font-family: Arial, Helvetica, sans-serif;
       }
 
       body {
-        padding: 0;
+        font-size: 10px;
       }
 
       .sheet {
-        min-height: calc(100vh - 24mm);
-      }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        align-items: flex-start;
-        border-bottom: 2px solid #111827;
-        padding-bottom: 14px;
-        margin-bottom: 18px;
-      }
-
-      .brand-lockup {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .brand-logo {
-        width: 58px;
-        height: 58px;
-        object-fit: contain;
-      }
-
-      .brand {
-        font-size: 12px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: #6b7280;
-        margin-bottom: 6px;
+        min-height: 277mm;
       }
 
       .title {
-        font-size: 24px;
-        line-height: 1.15;
+        text-align: center;
+        font-size: 19px;
+        line-height: 1;
         font-weight: 700;
-        margin: 0;
+        margin: 5px 0 9px;
       }
 
-      .subtitle {
-        margin: 6px 0 0;
-        color: #4b5563;
-        font-size: 12px;
-      }
-
-      .meta {
-        text-align: right;
-        font-size: 11px;
-        color: #4b5563;
-        min-width: 170px;
-      }
-
-      .meta strong {
-        display: block;
-        color: #111827;
-        font-size: 13px;
-        margin-top: 2px;
-      }
-
-      .top-grid {
+      .top-header {
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
-        gap: 16px;
-        margin-bottom: 18px;
-      }
-
-      .panel {
-        border: 1px solid #d1d5db;
-        border-radius: 14px;
-        padding: 14px;
-      }
-
-      .panel-title {
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #6b7280;
-        margin: 0 0 10px;
-      }
-
-      .identity {
-        display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1.15fr 1fr;
         gap: 6px;
+        height: 37mm;
       }
 
-      .identity-name {
-        font-size: 20px;
-        font-weight: 700;
-        margin: 0;
+      .header-box {
+        border: 1px solid #222;
+        padding: 5px;
+        font-size: 8px;
       }
 
-      .identity-line {
-        font-size: 13px;
-        color: #374151;
-        margin: 0;
-        line-height: 1.5;
-      }
-
-      .photo-card {
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        border-radius: 16px;
-        overflow: hidden;
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
+      .header-box.tall {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
+        justify-content: space-between;
       }
 
-      .photo-card img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .photo-placeholder span {
-        font-size: 42px;
-        font-weight: 700;
-        color: #9ca3af;
-      }
-
-      .fields {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .field {
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 10px 12px;
-        break-inside: avoid;
-      }
-
-      .label {
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #6b7280;
-        margin-bottom: 4px;
-      }
-
-      .value {
-        font-size: 13px;
-        line-height: 1.45;
-        color: #111827;
-        min-height: 18px;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .notes {
-        margin-top: 14px;
-      }
-
-      .signature {
-        margin-top: 28px;
+      .header-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 24px;
+        margin: 0 -5px -5px;
+      }
+
+      .header-row > div {
+        border-top: 1px solid #222;
+        padding: 6px 5px;
+      }
+
+      .email-box {
+        margin-top: 0;
+        height: 10mm;
+        border: 1px solid #222;
+        border-top: 0;
+        padding: 5px;
+      }
+
+      .form-section {
+        display: grid;
+        border: 1px solid #222;
+        border-bottom: 0;
+      }
+
+      .form-section.two {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .form-field {
+        min-height: 15mm;
+        border-right: 1px solid #222;
+        padding: 5px 7px;
+      }
+
+      .form-field:last-child {
+        border-right: 0;
+      }
+
+      .form-field.small {
+        min-height: 11mm;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 8px;
+        text-transform: uppercase;
+      }
+
+      .field-value {
+        display: block;
+        min-height: 13px;
+        padding-top: 3px;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .course-line {
+        display: grid;
+        grid-template-columns: 1.6fr 0.4fr;
+        border: 1px solid #222;
+        min-height: 15mm;
+      }
+
+      .course-line .form-field {
+        min-height: 15mm;
+      }
+
+      .declaration {
+        margin-top: 8px;
+        font-size: 9px;
+        line-height: 1.22;
+      }
+
+      .declaration p {
+        margin: 0 0 5px;
+      }
+
+      .declaration strong {
+        display: block;
+        text-align: center;
+        margin: 6px 0 4px;
+      }
+
+      .consent-line {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        margin: 4px 0;
+      }
+
+      .consent-option {
+        white-space: nowrap;
+      }
+
+      .checkbox {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 1px solid #222;
+        vertical-align: -2px;
+        margin-right: 4px;
+      }
+
+      .signature-row {
+        display: grid;
+        grid-template-columns: 1fr 1.7fr;
+        gap: 35px;
+        margin-top: 9px;
+        padding: 0 10px;
       }
 
       .signature-line {
-        border-top: 1px solid #9ca3af;
-        padding-top: 8px;
-        font-size: 11px;
-        color: #6b7280;
+        border-top: 1px solid #222;
+        padding-top: 3px;
+        font-size: 9px;
       }
 
-      .footer {
-        margin-top: 18px;
-        font-size: 10px;
-        color: #6b7280;
+      .minor {
+        margin-top: 14px;
+        border-top: 1px solid #222;
+        padding-top: 5px;
+        font-size: 9px;
+        line-height: 1.25;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .privacy-title {
+        text-align: center;
+        font-size: 16px;
+        margin: 4px 0 18px;
+      }
+
+      .privacy-copy {
+        font-size: 9.2px;
+        line-height: 1.25;
+      }
+
+      .privacy-copy p {
+        margin: 0 0 6px;
+      }
+
+      .privacy-copy ol {
+        margin: 3px 0 0 19px;
+        padding: 0;
+      }
+
+      .privacy-copy li {
+        padding-left: 3px;
+        margin-bottom: 5px;
       }
 
       @media print {
@@ -565,61 +562,74 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
   </head>
   <body>
     <div class="sheet">
-      <section class="header">
-        <div class="brand-lockup">
-          <img class="brand-logo" src="/iscrizione-academy-logo.png" alt="Latin Charm Academy" />
-          <div>
-            <div class="brand">Latin Charm</div>
-            <h1 class="title">Modulo di iscrizione</h1>
-            <p class="subtitle">Scheda riepilogativa per stampa dell'iscritto selezionato.</p>
-          </div>
+      <div class="top-header">
+        <div class="header-box tall">
+          <div>Intestazione ASD/SSD</div>
+          <strong>Tommy &amp; Laura Academy by Latin Charm</strong>
+          <div class="header-row"><div>Email:</div><div>Telefono:</div></div>
         </div>
-        <div class="meta">
-          Stampato il
-          <strong>${escapeHtml(
-            new Intl.DateTimeFormat("it-IT", {
-              dateStyle: "full",
-              timeStyle: "short",
-            }).format(new Date()),
-          )}</strong>
+        <div class="header-box tall">
+          <div>FEDERAZIONE / ENTE DI PROMOZIONE SPORTIVA / DISCIPLINA ASSOCIATA</div>
+          <div class="header-row"><div>TESSERA N.</div><div>SCADENZA</div></div>
         </div>
-      </section>
+      </div>
 
-      <section class="top-grid">
-        <div class="panel">
-          <h2 class="panel-title">Anagrafica</h2>
-          <div class="identity">
-            <p class="identity-name">${escapeHtml(fullName || "N/D")}</p>
-            <p class="identity-line">Corso: ${escapeHtml(formatPrintValue(iscritto.corso))}</p>
-            <p class="identity-line">Livello: ${escapeHtml(formatPrintValue(iscritto.livello))}</p>
-            <p class="identity-line">Stato: ${escapeHtml(formatPrintValue(iscritto.stato))}</p>
-          </div>
-        </div>
-        <div class="panel">
-          <h2 class="panel-title">Foto</h2>
-          ${photoHtml}
-        </div>
-      </section>
+      <h1 class="title">SCHEDA TESSERATO STAGIONE SPORTIVA 2026/2027</h1>
 
-      <section class="panel">
-        <h2 class="panel-title">Dati iscrizione</h2>
-        <div class="fields">
-          ${rowsHtml}
-        </div>
-      </section>
+      <div class="form-section two">
+        ${field("Cognome", iscritto.cognome)}
+        ${field("Nome", iscritto.nome)}
+      </div>
+      <div class="form-section" style="grid-template-columns: 2fr 1.5fr .35fr .45fr">
+        ${field("Indirizzo e n. civico")}
+        ${field("Comune")}
+        ${field("Prov")}
+        ${field("CAP")}
+      </div>
+      <div class="form-section" style="grid-template-columns: 2fr .3fr .7fr">
+        ${field("Nato a", iscritto.luogoNascita)}
+        ${field("Prov")}
+        ${field("Il giorno", formatPrintDate(iscritto.dataNascita))}
+      </div>
+      <div class="form-section two">
+        ${field("Email", iscritto.email)}
+        ${field("Cellulare", iscritto.telefono)}
+      </div>
+      <div class="form-section">
+        ${field("Codice fiscale", iscritto.codiceFiscale)}
+      </div>
 
-      <section class="panel notes">
-        <h2 class="panel-title">Note</h2>
-        <div class="value">${escapeHtml(formatPrintValue(iscritto.note))}</div>
-      </section>
+      <div class="declaration">
+        <strong>CHIEDE</strong>
+        <p>a) di essere tesserato/a, per il tramite dell'associazione ASD/società SSD sportiva dilettantistica in intestazione, alla FSN/DSA/EPS;</p>
+        <p>b) in qualità di tesserato/a della FSN/DSA/EPS indicata, di essere ammesso/a a partecipare alle attività sportive organizzate dalla ASD/SSD in intestazione, consapevole che la loro frequenza è subordinata al regolare versamento dei contributi specifici deliberati dall'organo amministrativo dell'associazione/società;</p>
+        <strong>DICHIARA</strong>
+        <p>1) laddove previsto dalla legge per la pratica della specifica disciplina sportiva scelta, di impegnarsi a fornire il certificato medico di idoneità alla pratica sportiva con validità;</p>
+        <p>2) di aver preso visione del modello organizzativo di gestione e controllo dell'attività sportiva (MOGAS) e del Codice di Condotta a tutela dei minori e per la prevenzione delle molestie, della violenza di genere e di ogni altra condizione di discriminazione;</p>
+        <p>3) di aver preso visione dell'informativa resa ai sensi dell'art. 13 del Regolamento UE/2016/679 (General Data Protection Regulation), ex art. 13 GDPR, resa nella seconda pagina del presente modulo.</p>
+        <p>4) di <b>autorizzare la ASD/SSD</b> all'acquisizione delle proprie immagini durante lo svolgimento delle attività didattiche della società e in occasione di esibizioni, feste e altri eventi, nonché il loro impiego a scopo informativo e pubblicitario.</p>
+        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+        <p>5) di <b>autorizzare la ASD/SSD</b> all'uso dei propri dati personali per la realizzazione di iniziative di comunicazione diretta e campagne pubblicitarie e/o promozionali.</p>
+        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+      </div>
+      <div class="signature-row">
+        <div class="signature-line">Data:</div>
+        <div class="signature-line">Firma del richiedente:</div>
+      </div>
 
-      <section class="signature">
-        <div class="signature-line">Firma del corsista</div>
-        <div class="signature-line">Firma della segreteria</div>
-      </section>
+      <div class="minor">
+        <b>PER IL MINORE DI ANNI 18</b><br /><br />
+        Il sottoscritto ______________________________ (genitore / tutore) del minore suddetto chiede l'iscrizione ai corsi/lezioni individuali dello stesso, assumendo personalmente tutte le responsabilità qui sopra e dichiarando di aver preso visione dell'informativa di cui al punto 3).<br />
+        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+        <div class="signature-row"><div class="signature-line">Data:</div><div class="signature-line">Firma del genitore/tutore:</div></div>
+      </div>
+    </div>
 
-      <div class="footer">
-        Documento generato automaticamente da Dance Hub.
+    <div class="sheet page-break">
+      <h1 class="privacy-title">INFORMATIVA EX ART. 13 DEL REGOLAMENTO UE/2016/679 (GDPR)</h1>
+      <div class="privacy-copy">
+        ${gdprParagraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+        <ol>${gdprItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>
       </div>
     </div>
     <script>
