@@ -370,6 +370,12 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         min-height: 0;
       }
 
+      .first-sheet {
+        min-height: 275mm;
+        display: flex;
+        flex-direction: column;
+      }
+
       .title {
         text-align: center;
         font-size: 19px;
@@ -393,7 +399,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .header-box strong {
         display: block;
-        font-size: 13px;
+        font-size: 19px;
         line-height: 1.1;
       }
 
@@ -433,9 +439,9 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .form-field {
-        min-height: 12mm;
+        min-height: 16mm;
         border-right: 1px solid #222;
-        padding: 3px 5px;
+        padding: 5px 6px;
       }
 
       .form-field:last-child {
@@ -472,26 +478,26 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .declaration {
-        margin-top: 5px;
-        font-size: 9px;
-        line-height: 1.18;
+        margin-top: 12mm;
+        font-size: 9.5px;
+        line-height: 1.25;
       }
 
       .declaration p {
-        margin: 0 0 3px;
+        margin: 0 0 5px;
       }
 
       .declaration strong {
         display: block;
         text-align: center;
-        margin: 4px 0 2px;
+        margin: 7px 0 4px;
       }
 
       .consent-line {
         display: flex;
         gap: 16px;
         justify-content: center;
-        margin: 2px 0;
+        margin: 4px 0;
       }
 
       .consent-option {
@@ -511,22 +517,23 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         display: grid;
         grid-template-columns: 1fr 1.7fr;
         gap: 35px;
-        margin-top: 6px;
-        padding: 0 6px;
+        margin-top: 16px;
+        padding: 0 10px;
       }
 
       .signature-line {
         border-top: 1px solid #222;
-        padding-top: 3px;
-        font-size: 9px;
+        padding-top: 5px;
+        min-height: 25px;
+        font-size: 9.5px;
       }
 
       .minor {
-        margin-top: 9px;
+        margin-top: auto;
+        padding-top: 8px;
         border-top: 1px solid #222;
-        padding-top: 5px;
-        font-size: 9px;
-        line-height: 1.25;
+        font-size: 9.5px;
+        line-height: 1.3;
       }
 
       .page-break {
@@ -567,7 +574,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
     </style>
   </head>
   <body>
-    <div class="sheet">
+    <div class="sheet first-sheet">
       <div class="top-header">
         <div class="header-box tall">
           <div>Intestazione ASD/SSD</div>
