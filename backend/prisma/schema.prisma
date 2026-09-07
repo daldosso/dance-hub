@@ -236,6 +236,7 @@ model users {
   username                            String?                     @unique @db.VarChar(50)
   full_name                           String?                     @db.VarChar(100)
   birth_date                          DateTime?                   @db.Date
+  codice_fiscale                      String?                     @db.VarChar(16)
   gender                              String?                     @db.VarChar(20)
   bio                                 String?
   profile_picture_url                 String?                     @db.VarChar(512)

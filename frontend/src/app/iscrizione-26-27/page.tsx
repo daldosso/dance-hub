@@ -19,6 +19,7 @@ type FormState = {
   email: string;
   phone: string;
   birthDate: string;
+  codiceFiscale: string;
   city: string;
   gender: string;
   skillLevel: string;
@@ -38,6 +39,7 @@ const initialForm: FormState = {
   email: "",
   phone: "",
   birthDate: "",
+  codiceFiscale: "",
   city: "",
   gender: "",
   skillLevel: "Principiante",
@@ -189,6 +191,7 @@ export default function EnrollmentPage() {
       formData.append("email", form.email.trim());
       formData.append("phone", form.phone.trim());
       formData.append("birthDate", form.birthDate);
+      formData.append("codiceFiscale", form.codiceFiscale.trim().toUpperCase());
       formData.append("city", form.city.trim());
       formData.append("gender", form.gender);
       formData.append("skillLevel", form.skillLevel);
@@ -381,6 +384,25 @@ export default function EnrollmentPage() {
                   autoComplete="address-level2"
                   placeholder="Es. Milano"
                   className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                  Codice fiscale
+                </label>
+                <input
+                  value={form.codiceFiscale}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      codiceFiscale: event.target.value.toUpperCase(),
+                    }))
+                  }
+                  maxLength={16}
+                  autoComplete="off"
+                  placeholder="RSSMRA80A01H501U"
+                  className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm uppercase tracking-[0.08em] text-[#3d3d3d] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
                 />
               </div>
 
