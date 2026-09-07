@@ -22,6 +22,7 @@ type UpdateUserBody = {
   dataNascita?: unknown;
   luogoNascita?: unknown;
   sesso?: unknown;
+  codiceFiscale?: unknown;
 };
 
 function getTrimmedString(value: unknown) {
@@ -71,6 +72,8 @@ async function serializeUser(userId: number) {
       username: true,
       full_name: true,
       city: true,
+      birth_date: true,
+      codice_fiscale: true,
       dance_styles: true,
       skill_level: true,
       status: true,
@@ -106,6 +109,8 @@ async function serializeUser(userId: number) {
     username: user.username,
     fullName: user.full_name,
     city: user.city,
+    dataNascita: user.birth_date,
+    codiceFiscale: user.codice_fiscale,
     danceStyles: user.dance_styles,
     skillLevel: user.skill_level,
     status: user.status,
@@ -207,6 +212,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const birthDate = parseDateValue(raw.dataNascita);
     const birthplace = getNullableString(raw.luogoNascita);
     const gender = getNullableString(raw.sesso);
+    const codiceFiscale = getNullableString(raw.codiceFiscale)?.toUpperCase() ?? null;
 
     await prisma.$transaction(async (tx) => {
       await tx.users.update({
@@ -216,6 +222,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
           full_name: fullName,
           bio: notes ?? undefined,
           birth_date: birthDate ?? undefined,
+          codice_fiscale: codiceFiscale,
           city: birthplace ?? undefined,
           gender: gender ?? undefined,
           dance_styles: [corso],

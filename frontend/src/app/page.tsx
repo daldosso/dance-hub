@@ -43,6 +43,8 @@ type BackendUser = {
   isTeacher: boolean | null;
   isOrganizer: boolean | null;
   profilePictureUrl: string | null;
+  dataNascita: string | null;
+  codiceFiscale: string | null;
   courses?: { id: number; title: string }[];
 };
 
@@ -238,6 +240,11 @@ function mapBackendUserToIscritto(
     livello: mapBackendSkillLevel(user.skillLevel),
     stato: mapBackendStatus(user.status),
     note: undefined,
+    dataNascita:
+      typeof user.dataNascita === "string" ? user.dataNascita : undefined,
+    codiceFiscale:
+      typeof user.codiceFiscale === "string" ? user.codiceFiscale : undefined,
+    luogoNascita: typeof user.city === "string" ? user.city : undefined,
     photoUrl:
       typeof user.profilePictureUrl === "string"
         ? user.profilePictureUrl
