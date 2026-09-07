@@ -443,9 +443,9 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       }
 
       .form-field {
-        min-height: 16mm;
+        min-height: 11mm;
         border-right: 1px solid #222;
-        padding: 5px 6px;
+        padding: 3px 5px;
       }
 
       .form-field:last-child {
@@ -454,6 +454,10 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
 
       .form-field.small {
         min-height: 11mm;
+      }
+
+      .last-field-section {
+        border-bottom: 1px solid #222;
       }
 
       .field-label {
@@ -619,7 +623,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         ${field("Email", iscritto.email)}
         ${field("Cellulare", iscritto.telefono)}
       </div>
-      <div class="form-section">
+      <div class="form-section last-field-section">
         ${field("Codice fiscale", iscritto.codiceFiscale)}
       </div>
 
