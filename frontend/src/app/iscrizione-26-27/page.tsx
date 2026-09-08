@@ -25,7 +25,6 @@ type FormState = {
   residenceAddress: string;
   residenceProvince: string;
   residencePostalCode: string;
-  gender: string;
   courseId: string;
   courseTitle: string;
   privacyImageConsent: boolean;
@@ -49,7 +48,6 @@ const initialForm: FormState = {
   residenceAddress: "",
   residenceProvince: "",
   residencePostalCode: "",
-  gender: "",
   courseId: "",
   courseTitle: "",
   privacyImageConsent: false,
@@ -57,7 +55,6 @@ const initialForm: FormState = {
   privacyMinorConsent: false,
 };
 
-const genders = ["Donna", "Uomo", "Altro", "Preferisco non dirlo"];
 const PHOTO_MAX_DIMENSION = 1600;
 const PHOTO_QUALITY = 0.82;
 
@@ -204,7 +201,7 @@ export default function EnrollmentPage() {
       formData.append("residenceAddress", form.residenceAddress.trim());
       formData.append("residenceProvince", form.residenceProvince.trim().toUpperCase());
       formData.append("residencePostalCode", form.residencePostalCode.trim());
-      formData.append("gender", form.gender);
+      formData.append("gender", "");
       formData.append("skillLevel", "");
       formData.append("courseId", form.courseId);
       formData.append("courseTitle", selectedCourse?.title ?? form.courseTitle.trim());
@@ -496,26 +493,6 @@ export default function EnrollmentPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                  Sesso
-                </label>
-                <select
-                  value={form.gender}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, gender: event.target.value }))
-                  }
-                  className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
-                >
-                  <option value="">Seleziona</option>
-                  {genders.map((gender) => (
-                    <option key={gender} value={gender}>
-                      {gender}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="sm:col-span-2 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Corso
@@ -547,6 +524,54 @@ export default function EnrollmentPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="sm:col-span-2 space-y-3 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                  Consensi privacy
+                </p>
+                <label className="flex gap-3 text-sm text-[#666666]">
+                  <input
+                    type="checkbox"
+                    checked={form.privacyImageConsent}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        privacyImageConsent: event.target.checked,
+                      }))
+                    }
+                    className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                  />
+                  <span>Acconsento all&apos;uso delle immagini per attività informative e promozionali.</span>
+                </label>
+                <label className="flex gap-3 text-sm text-[#666666]">
+                  <input
+                    type="checkbox"
+                    checked={form.privacyMarketingConsent}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        privacyMarketingConsent: event.target.checked,
+                      }))
+                    }
+                    className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                  />
+                  <span>Acconsento a ricevere comunicazioni e iniziative promozionali.</span>
+                </label>
+                <label className="flex gap-3 text-sm text-[#666666]">
+                  <input
+                    type="checkbox"
+                    checked={form.privacyMinorConsent}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        privacyMinorConsent: event.target.checked,
+                      }))
+                    }
+                    className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                  />
+                  <span>Per i minori, acconsento al trattamento dei dati e alle attività previste.</span>
+                </label>
               </div>
 
               <div className="sm:col-span-2 rounded-3xl border border-dashed border-[#F557BF]/30 bg-[#F557BF]/5 p-4">
@@ -627,54 +652,6 @@ export default function EnrollmentPage() {
                   </div>
                 )}
               </div>
-            </div>
-
-            <div className="mt-4 space-y-3 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                Consensi privacy
-              </p>
-              <label className="flex gap-3 text-sm text-[#666666]">
-                <input
-                  type="checkbox"
-                  checked={form.privacyImageConsent}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      privacyImageConsent: event.target.checked,
-                    }))
-                  }
-                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
-                />
-                <span>Acconsento all&apos;uso delle immagini per attività informative e promozionali.</span>
-              </label>
-              <label className="flex gap-3 text-sm text-[#666666]">
-                <input
-                  type="checkbox"
-                  checked={form.privacyMarketingConsent}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      privacyMarketingConsent: event.target.checked,
-                    }))
-                  }
-                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
-                />
-                <span>Acconsento a ricevere comunicazioni e iniziative promozionali.</span>
-              </label>
-              <label className="flex gap-3 text-sm text-[#666666]">
-                <input
-                  type="checkbox"
-                  checked={form.privacyMinorConsent}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      privacyMinorConsent: event.target.checked,
-                    }))
-                  }
-                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
-                />
-                <span>Per i minori, acconsento al trattamento dei dati e alle attività previste.</span>
-              </label>
             </div>
 
             {errorMessage && (
