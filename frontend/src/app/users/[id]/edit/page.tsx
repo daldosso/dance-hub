@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 const AUTH_KEY = "dance-hub-auth";
 const levels = ["Principiante", "Intermedio", "Avanzato"];
@@ -67,6 +67,7 @@ type ApiUser = {
   privacyImageConsent?: boolean | null;
   privacyMarketingConsent?: boolean | null;
   privacyMinorConsent?: boolean | null;
+  profilePictureUrl?: string | null;
 };
 
 function getToken() {
@@ -106,6 +107,11 @@ export default function EditUserPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -133,6 +139,7 @@ export default function EditUserPage() {
         }
 
         const user = body.user;
+        setPhotoUrl(user.profilePictureUrl ?? null);
         const name = splitName(user.fullName ?? "");
         setForm({
           ...emptyForm,
@@ -162,6 +169,62 @@ export default function EditUserPage() {
 
     void loadUser();
   }, [params.id, router]);
+
+  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("La foto deve essere un'immagine.");
+      event.target.value = "";
+      return;
+    }
+
+    setError(null);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  async function handlePhotoUpload() {
+    if (!photoFile) {
+      setError("Seleziona prima una foto.");
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    setPhotoUploading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("profilePhoto", photoFile);
+      formData.append("userId", params.id);
+      const response = await fetch("/api/users/profile-photo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        profilePictureUrl?: string;
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(body.error ?? "Errore durante il caricamento della foto");
+      }
+      setPhotoUrl(body.profilePictureUrl ?? photoPreview);
+      setPhotoFile(null);
+      setMessage("Foto aggiornata correttamente");
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Errore durante il caricamento della foto");
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -240,6 +303,26 @@ export default function EditUserPage() {
             <p className="text-sm text-slate-400">Caricamento dati...</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950/30 p-4 sm:flex-row sm:items-center">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-emerald-400/40 bg-slate-800 text-2xl font-semibold text-emerald-200">
+                  {(photoPreview ?? photoUrl) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photoPreview ?? photoUrl ?? ""} alt="Foto profilo" className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{`${form.nome[0] ?? ""}${form.cognome[0] ?? ""}`.toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Foto profilo</p>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="block w-full text-xs text-slate-300 file:mr-2 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950" />
+                    <button type="button" onClick={() => void handlePhotoUpload()} disabled={!photoFile || photoUploading} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
+                      {photoUploading ? "Caricamento..." : "Aggiorna foto"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 {([
                   ["nome", "Nome", "text"],
