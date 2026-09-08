@@ -2,26 +2,37 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { uploadProfilePicture } from "../services/upload.service";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { ensureUserStatusColumn } from "../lib/ensure-user-status-column";
 
 const prisma = new PrismaClient();
 
 export async function listUsers(req: Request, res: Response) {
   try {
+    await ensureUserStatusColumn();
     const users = await prisma.users.findMany({
       select: {
         id: true,
         email: true,
+        phone: true,
         username: true,
         full_name: true,
         city: true,
         birth_date: true,
+        birth_place: true,
         codice_fiscale: true,
+        gender: true,
         dance_styles: true,
         skill_level: true,
         status: true,
         is_teacher: true,
         is_organizer: true,
         profile_picture_url: true,
+        residence_address: true,
+        residence_province: true,
+        residence_postal_code: true,
+        privacy_image_consent: true,
+        privacy_marketing_consent: true,
+        privacy_minor_consent: true,
         course_enrollments: {
           select: {
             course_id: true,
@@ -45,17 +56,26 @@ export async function listUsers(req: Request, res: Response) {
       return {
         id: Number(user.id),
         email: user.email,
+        phone: user.phone,
         username: user.username,
         fullName: user.full_name,
         city: user.city,
         dataNascita: user.birth_date,
+        birthPlace: user.birth_place,
         codiceFiscale: user.codice_fiscale,
+        gender: user.gender,
         danceStyles: user.dance_styles,
         skillLevel: user.skill_level,
         status: user.status,
         isTeacher: user.is_teacher,
         isOrganizer: user.is_organizer,
         profilePictureUrl: user.profile_picture_url,
+        residenceAddress: user.residence_address,
+        residenceProvince: user.residence_province,
+        residencePostalCode: user.residence_postal_code,
+        privacyImageConsent: user.privacy_image_consent,
+        privacyMarketingConsent: user.privacy_marketing_consent,
+        privacyMinorConsent: user.privacy_minor_consent,
         courses: courses.map((c) => ({
           id: Number(c.id),
           title: c.title,
