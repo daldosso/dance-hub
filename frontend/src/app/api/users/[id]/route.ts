@@ -15,6 +15,7 @@ type UpdateUserBody = {
   nome?: unknown;
   cognome?: unknown;
   email?: unknown;
+  telefono?: unknown;
   corso?: unknown;
   livello?: unknown;
   stato?: unknown;
@@ -86,6 +87,7 @@ async function serializeUser(userId: number) {
     select: {
       id: true,
       email: true,
+      phone: true,
       username: true,
       full_name: true,
       city: true,
@@ -131,7 +133,8 @@ async function serializeUser(userId: number) {
     id: Number(user.id),
     email: user.email,
     username: user.username,
-    fullName: user.full_name,
+      fullName: user.full_name,
+    phone: user.phone,
     city: user.city,
     dataNascita: user.birth_date,
     birthPlace: user.birth_place,
@@ -178,6 +181,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const nome = getTrimmedString(raw.nome);
     const cognome = getTrimmedString(raw.cognome);
     const email = getTrimmedString(raw.email);
+    const telefono = getNullableString(raw.telefono);
     const corso = getTrimmedString(raw.corso);
     const livello = getTrimmedString(raw.livello);
     const stato = getTrimmedString(raw.stato);
@@ -257,6 +261,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         where: { id: BigInt(userId) },
         data: {
           email: email || undefined,
+          phone: telefono ?? undefined,
           full_name: fullName,
           bio: notes ?? undefined,
           birth_date: birthDate ?? undefined,

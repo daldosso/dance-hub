@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { cloudinary } from "@/lib/cloudinary";
+import { ensureUserStatusColumn } from "@/lib/ensure-user-status-column";
 
 export const runtime = "nodejs";
 
@@ -78,6 +79,7 @@ function parseBooleanField(value: FormDataEntryValue | null) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureUserStatusColumn();
     const formData = await req.formData();
     const payload = {
       fullName: String(formData.get("fullName") ?? ""),
@@ -131,6 +133,7 @@ export async function POST(req: NextRequest) {
       where: { email: parsed.email },
       create: {
         email: parsed.email,
+        phone: parsed.phone.trim(),
         password_hash: null,
         full_name: fullName,
         profile_picture_url: profilePictureUrl,
@@ -153,6 +156,7 @@ export async function POST(req: NextRequest) {
       },
       update: {
         full_name: fullName,
+        phone: parsed.phone.trim(),
         profile_picture_url: profilePictureUrl ?? undefined,
         city: parsed.city?.trim() || null,
         birth_place: parsed.birthPlace?.trim() || null,

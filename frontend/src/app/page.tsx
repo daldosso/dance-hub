@@ -43,7 +43,9 @@ type BackendUser = {
   email: string | null;
   username: string | null;
   fullName: string | null;
+  phone: string | null;
   city: string | null;
+  gender: string | null;
   danceStyles: string[] | null;
   skillLevel: string | null;
   status: string | null;
@@ -246,7 +248,7 @@ function mapBackendUserToIscritto(
     nome: nomeFromName || "N/D",
     cognome: cognomeFromName || "N/D",
     email: typeof user.email === "string" ? user.email : "",
-    telefono: "",
+    telefono: typeof user.phone === "string" ? user.phone : "",
     corso:
       courseTitle ||
       danceStyleFallback ||
@@ -273,6 +275,7 @@ function mapBackendUserToIscritto(
         : undefined,
     codiceFiscale:
       typeof user.codiceFiscale === "string" ? user.codiceFiscale : undefined,
+    sesso: typeof user.gender === "string" ? user.gender : undefined,
     privacyImageConsent: user.privacyImageConsent ?? false,
     privacyMarketingConsent: user.privacyMarketingConsent ?? false,
     privacyMinorConsent: user.privacyMinorConsent ?? false,
@@ -645,14 +648,14 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         ${field("Nome", iscritto.nome)}
       </div>
       <div class="form-section" style="grid-template-columns: 2fr 1.5fr .35fr .45fr">
-        ${field("Indirizzo e n. civico")}
-        ${field("Comune")}
-        ${field("Prov")}
-        ${field("CAP")}
+        ${field("Indirizzo e n. civico", iscritto.address)}
+        ${field("Comune", iscritto.city)}
+        ${field("Prov", iscritto.residenceProvince)}
+        ${field("CAP", iscritto.residencePostalCode)}
       </div>
       <div class="form-section" style="grid-template-columns: 2fr .3fr .7fr">
         ${field("Nato a", iscritto.luogoNascita)}
-        ${field("Prov")}
+        ${field("Sesso", iscritto.sesso)}
         ${field("Il giorno", formatPrintDate(iscritto.dataNascita))}
       </div>
       <div class="form-section two">

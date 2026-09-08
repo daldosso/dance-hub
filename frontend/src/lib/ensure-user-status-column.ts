@@ -11,6 +11,9 @@ export function ensureUserStatusColumn() {
       await prisma.$executeRawUnsafe(
         'UPDATE "users" SET "status" = \'Attivo\' WHERE "status" IS NULL',
       );
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "phone" VARCHAR(50)',
+      );
     })();
   }
 

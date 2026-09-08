@@ -12,8 +12,10 @@ export async function GET() {
       select: {
         id: true,
         email: true,
+        phone: true,
         username: true,
         full_name: true,
+        gender: true,
         city: true,
         birth_date: true,
         birth_place: true,
@@ -53,8 +55,10 @@ export async function GET() {
       return {
         id: Number(user.id),
         email: user.email,
+        phone: user.phone,
         username: user.username,
         fullName: user.full_name,
+        gender: user.gender,
         city: user.city,
         dataNascita: user.birth_date,
         birthPlace: user.birth_place,

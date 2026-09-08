@@ -12,6 +12,7 @@ type UserForm = {
   nome: string;
   cognome: string;
   email: string;
+  telefono: string;
   corso: string;
   livello: string;
   stato: string;
@@ -32,6 +33,7 @@ const emptyForm: UserForm = {
   nome: "",
   cognome: "",
   email: "",
+  telefono: "",
   corso: "",
   livello: "Principiante",
   stato: "Attivo",
@@ -51,6 +53,7 @@ const emptyForm: UserForm = {
 type ApiUser = {
   fullName?: string | null;
   email?: string | null;
+  phone?: string | null;
   courses?: { title: string }[];
   skillLevel?: string | null;
   status?: string | null;
@@ -135,6 +138,7 @@ export default function EditUserPage() {
           ...emptyForm,
           ...name,
           email: user.email ?? "",
+          telefono: user.phone ?? "",
           corso: user.courses?.[0]?.title ?? "",
           livello: normalizeLevel(user.skillLevel),
           stato: user.status ?? "Attivo",
@@ -241,6 +245,7 @@ export default function EditUserPage() {
                   ["nome", "Nome", "text"],
                   ["cognome", "Cognome", "text"],
                   ["email", "Email", "email"],
+                  ["telefono", "Cellulare", "tel"],
                   ["corso", "Corso", "text"],
                   ["dataNascita", "Data di nascita", "date"],
                   ["luogoNascita", "Luogo di nascita", "text"],
