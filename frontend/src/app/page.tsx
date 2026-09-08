@@ -20,9 +20,16 @@ type Iscritto = {
   note?: string;
   dataNascita?: string;
   luogoNascita?: string;
+  city?: string;
+  address?: string;
+  residenceProvince?: string;
+  residencePostalCode?: string;
   codiceFiscale?: string;
   sesso?: string;
   numeroDocumento?: string;
+  privacyImageConsent?: boolean;
+  privacyMarketingConsent?: boolean;
+  privacyMinorConsent?: boolean;
   photoUrl?: string;
   courseIds?: number[];
 };
@@ -44,7 +51,14 @@ type BackendUser = {
   isOrganizer: boolean | null;
   profilePictureUrl: string | null;
   dataNascita: string | null;
+  birthPlace: string | null;
   codiceFiscale: string | null;
+  residenceAddress: string | null;
+  residenceProvince: string | null;
+  residencePostalCode: string | null;
+  privacyImageConsent: boolean | null;
+  privacyMarketingConsent: boolean | null;
+  privacyMinorConsent: boolean | null;
   courses?: { id: number; title: string }[];
 };
 
@@ -242,9 +256,26 @@ function mapBackendUserToIscritto(
     note: undefined,
     dataNascita:
       typeof user.dataNascita === "string" ? user.dataNascita : undefined,
+    luogoNascita:
+      typeof user.birthPlace === "string" ? user.birthPlace : undefined,
+    city: typeof user.city === "string" ? user.city : undefined,
+    address:
+      typeof user.residenceAddress === "string"
+        ? user.residenceAddress
+        : undefined,
+    residenceProvince:
+      typeof user.residenceProvince === "string"
+        ? user.residenceProvince
+        : undefined,
+    residencePostalCode:
+      typeof user.residencePostalCode === "string"
+        ? user.residencePostalCode
+        : undefined,
     codiceFiscale:
       typeof user.codiceFiscale === "string" ? user.codiceFiscale : undefined,
-    luogoNascita: typeof user.city === "string" ? user.city : undefined,
+    privacyImageConsent: user.privacyImageConsent ?? false,
+    privacyMarketingConsent: user.privacyMarketingConsent ?? false,
+    privacyMinorConsent: user.privacyMinorConsent ?? false,
     photoUrl:
       typeof user.profilePictureUrl === "string"
         ? user.profilePictureUrl
@@ -318,8 +349,10 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       <span class="field-label">${escapeHtml(label)}</span>
       <span class="field-value">${escapeHtml(formatPrintValue(value))}</span>
     </div>`;
-  const checkbox = (label: string) => `
-    <span class="consent-option"><span class="checkbox"></span>${label}</span>`;
+  const checkbox = (label: string, checked: boolean) => `
+    <span class="consent-option">
+      <span class="checkbox ${checked ? "checked" : ""}"></span>${label}
+    </span>`;
 
   const gdprParagraphs = [
     "Il Regolamento UE/2016/679 \"General Data Protection Regulation\" (in seguito GDPR), di immediata applicazione anche in Italia, prevede la tutela delle persone e di altri soggetti rispetto al trattamento dei propri dati personali.",
@@ -525,6 +558,10 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         border: 1px solid #222;
         vertical-align: -2px;
         margin-right: 4px;
+      }
+
+      .checkbox.checked {
+        background: #222;
       }
 
       .signature-row {

@@ -13,8 +13,15 @@ const registerSchema = z.object({
   birthDate: z.string().datetime().optional(),
   gender: z.string().optional(),
   city: z.string().optional(),
+  birthPlace: z.string().optional(),
+  residenceAddress: z.string().optional(),
+  residenceProvince: z.string().optional(),
+  residencePostalCode: z.string().optional(),
   danceStyles: z.array(z.string()).optional(),
   skillLevel: z.string().optional(),
+  privacyImageConsent: z.boolean().optional(),
+  privacyMarketingConsent: z.boolean().optional(),
+  privacyMinorConsent: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -44,8 +51,15 @@ export async function POST(req: NextRequest) {
         birth_date: validated.birthDate ? new Date(validated.birthDate) : null,
         gender: validated.gender,
         city: validated.city,
+        birth_place: validated.birthPlace,
+        residence_address: validated.residenceAddress,
+        residence_province: validated.residenceProvince,
+        residence_postal_code: validated.residencePostalCode,
         dance_styles: validated.danceStyles || [],
         skill_level: validated.skillLevel,
+        privacy_image_consent: validated.privacyImageConsent ?? false,
+        privacy_marketing_consent: validated.privacyMarketingConsent ?? false,
+        privacy_minor_consent: validated.privacyMinorConsent ?? false,
         is_active: true,
       },
     });

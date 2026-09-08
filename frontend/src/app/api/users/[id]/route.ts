@@ -23,6 +23,14 @@ type UpdateUserBody = {
   luogoNascita?: unknown;
   sesso?: unknown;
   codiceFiscale?: unknown;
+  birthPlace?: unknown;
+  residenceAddress?: unknown;
+  residenceCity?: unknown;
+  residenceProvince?: unknown;
+  residencePostalCode?: unknown;
+  privacyImageConsent?: unknown;
+  privacyMarketingConsent?: unknown;
+  privacyMinorConsent?: unknown;
 };
 
 function getTrimmedString(value: unknown) {
@@ -40,6 +48,15 @@ function parseDateValue(value: unknown) {
 
   const date = new Date(trimmed);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseBooleanValue(value: unknown) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  const normalized = getTrimmedString(value).toLowerCase();
+  return ["true", "1", "on", "yes"].includes(normalized);
 }
 
 function normalizeSkillLevel(value: string) {
@@ -73,11 +90,18 @@ async function serializeUser(userId: number) {
       full_name: true,
       city: true,
       birth_date: true,
+      birth_place: true,
       codice_fiscale: true,
       dance_styles: true,
       skill_level: true,
       status: true,
       profile_picture_url: true,
+      residence_address: true,
+      residence_province: true,
+      residence_postal_code: true,
+      privacy_image_consent: true,
+      privacy_marketing_consent: true,
+      privacy_minor_consent: true,
       course_enrollments: {
         select: {
           course_id: true,
@@ -110,11 +134,18 @@ async function serializeUser(userId: number) {
     fullName: user.full_name,
     city: user.city,
     dataNascita: user.birth_date,
+    birthPlace: user.birth_place,
     codiceFiscale: user.codice_fiscale,
     danceStyles: user.dance_styles,
     skillLevel: user.skill_level,
     status: user.status,
     profilePictureUrl: user.profile_picture_url,
+    residenceAddress: user.residence_address,
+    residenceProvince: user.residence_province,
+    residencePostalCode: user.residence_postal_code,
+    privacyImageConsent: user.privacy_image_consent,
+    privacyMarketingConsent: user.privacy_marketing_consent,
+    privacyMinorConsent: user.privacy_minor_consent,
     courses: courses.map((course) => ({
       id: Number(course.id),
       title: course.title,
@@ -212,7 +243,15 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const birthDate = parseDateValue(raw.dataNascita);
     const birthplace = getNullableString(raw.luogoNascita);
     const gender = getNullableString(raw.sesso);
+    const birthPlace = getNullableString(raw.birthPlace);
+    const residenceAddress = getNullableString(raw.residenceAddress);
+    const residenceCity = getNullableString(raw.residenceCity);
+    const residenceProvince = getNullableString(raw.residenceProvince);
+    const residencePostalCode = getNullableString(raw.residencePostalCode);
     const codiceFiscale = getNullableString(raw.codiceFiscale)?.toUpperCase() ?? null;
+    const privacyImageConsent = parseBooleanValue(raw.privacyImageConsent);
+    const privacyMarketingConsent = parseBooleanValue(raw.privacyMarketingConsent);
+    const privacyMinorConsent = parseBooleanValue(raw.privacyMinorConsent);
 
     await prisma.$transaction(async (tx) => {
       await tx.users.update({
@@ -222,12 +261,19 @@ export async function PUT(req: NextRequest, context: RouteContext) {
           full_name: fullName,
           bio: notes ?? undefined,
           birth_date: birthDate ?? undefined,
+          birth_place: birthPlace ?? undefined,
           codice_fiscale: codiceFiscale,
-          city: birthplace ?? undefined,
+          city: residenceCity ?? undefined,
+          residence_address: residenceAddress ?? undefined,
+          residence_province: residenceProvince ?? undefined,
+          residence_postal_code: residencePostalCode ?? undefined,
           gender: gender ?? undefined,
           dance_styles: [corso],
           skill_level: skillLevel ?? undefined,
           status,
+          privacy_image_consent: privacyImageConsent,
+          privacy_marketing_consent: privacyMarketingConsent,
+          privacy_minor_consent: privacyMinorConsent,
           updated_at: new Date(),
         },
       });

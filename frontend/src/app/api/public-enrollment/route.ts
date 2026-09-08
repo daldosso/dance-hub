@@ -12,14 +12,21 @@ const publicEnrollmentSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(6),
   birthDate: z.string().optional().or(z.literal("")),
+  birthPlace: z.string().optional().or(z.literal("")),
   codiceFiscale: z.string().max(16).optional().or(z.literal("")),
   city: z.string().optional().or(z.literal("")),
+  residenceAddress: z.string().optional().or(z.literal("")),
+  residenceProvince: z.string().optional().or(z.literal("")),
+  residencePostalCode: z.string().optional().or(z.literal("")),
   gender: z.string().optional().or(z.literal("")),
   skillLevel: z.string().optional().or(z.literal("")),
   courseId: z.string().optional().or(z.literal("")),
   courseTitle: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
   consent: z.literal(true),
+  privacyImageConsent: z.boolean().optional(),
+  privacyMarketingConsent: z.boolean().optional(),
+  privacyMinorConsent: z.boolean().optional(),
 });
 
 async function uploadEnrollmentPhoto(file: File, fullName: string) {
@@ -64,6 +71,11 @@ function splitFullName(fullName: string) {
   };
 }
 
+function parseBooleanField(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "on" || normalized === "yes";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -72,14 +84,21 @@ export async function POST(req: NextRequest) {
       email: String(formData.get("email") ?? ""),
       phone: String(formData.get("phone") ?? ""),
       birthDate: String(formData.get("birthDate") ?? ""),
+      birthPlace: String(formData.get("birthPlace") ?? ""),
       codiceFiscale: String(formData.get("codiceFiscale") ?? "").trim().toUpperCase(),
       city: String(formData.get("city") ?? ""),
+      residenceAddress: String(formData.get("residenceAddress") ?? ""),
+      residenceProvince: String(formData.get("residenceProvince") ?? ""),
+      residencePostalCode: String(formData.get("residencePostalCode") ?? ""),
       gender: String(formData.get("gender") ?? ""),
       skillLevel: String(formData.get("skillLevel") ?? ""),
       courseId: String(formData.get("courseId") ?? ""),
       courseTitle: String(formData.get("courseTitle") ?? ""),
       notes: String(formData.get("notes") ?? ""),
       consent: String(formData.get("consent") ?? "") === "true",
+      privacyImageConsent: parseBooleanField(formData.get("privacyImageConsent")),
+      privacyMarketingConsent: parseBooleanField(formData.get("privacyMarketingConsent")),
+      privacyMinorConsent: parseBooleanField(formData.get("privacyMinorConsent")),
     };
     const parsed = publicEnrollmentSchema.parse(payload);
     const profilePhoto = formData.get("profilePhoto");
@@ -116,6 +135,10 @@ export async function POST(req: NextRequest) {
         full_name: fullName,
         profile_picture_url: profilePictureUrl,
         city: parsed.city?.trim() || null,
+        birth_place: parsed.birthPlace?.trim() || null,
+        residence_address: parsed.residenceAddress?.trim() || null,
+        residence_province: parsed.residenceProvince?.trim() || null,
+        residence_postal_code: parsed.residencePostalCode?.trim() || null,
         country: "Italia",
         birth_date: parsed.birthDate ? new Date(parsed.birthDate) : null,
         codice_fiscale: parsed.codiceFiscale || null,
@@ -123,12 +146,19 @@ export async function POST(req: NextRequest) {
         bio: parsed.notes?.trim() || null,
         dance_styles: courseTags,
         skill_level: parsed.skillLevel?.trim() || null,
+        privacy_image_consent: parsed.privacyImageConsent ?? false,
+        privacy_marketing_consent: parsed.privacyMarketingConsent ?? false,
+        privacy_minor_consent: parsed.privacyMinorConsent ?? false,
         is_active: true,
       },
       update: {
         full_name: fullName,
         profile_picture_url: profilePictureUrl ?? undefined,
         city: parsed.city?.trim() || null,
+        birth_place: parsed.birthPlace?.trim() || null,
+        residence_address: parsed.residenceAddress?.trim() || null,
+        residence_province: parsed.residenceProvince?.trim() || null,
+        residence_postal_code: parsed.residencePostalCode?.trim() || null,
         country: "Italia",
         birth_date: parsed.birthDate ? new Date(parsed.birthDate) : null,
         codice_fiscale: parsed.codiceFiscale || null,
@@ -136,6 +166,9 @@ export async function POST(req: NextRequest) {
         bio: parsed.notes?.trim() || null,
         dance_styles: courseTags,
         skill_level: parsed.skillLevel?.trim() || null,
+        privacy_image_consent: parsed.privacyImageConsent ?? false,
+        privacy_marketing_consent: parsed.privacyMarketingConsent ?? false,
+        privacy_minor_consent: parsed.privacyMinorConsent ?? false,
         is_active: true,
       },
     });
