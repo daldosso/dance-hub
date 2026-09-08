@@ -241,7 +241,6 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const fullName = `${nome} ${cognome}`.trim();
     const notes = getNullableString(raw.note);
     const birthDate = parseDateValue(raw.dataNascita);
-    const birthplace = getNullableString(raw.luogoNascita);
     const gender = getNullableString(raw.sesso);
     const birthPlace = getNullableString(raw.birthPlace);
     const residenceAddress = getNullableString(raw.residenceAddress);

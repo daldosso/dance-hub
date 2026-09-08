@@ -679,9 +679,9 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
         <p>2) di aver preso visione del modello organizzativo di gestione e controllo dell'attività sportiva (MOGAS) e del Codice di Condotta a tutela dei minori e per la prevenzione delle molestie, della violenza di genere e di ogni altra condizione di discriminazione;</p>
         <p>3) di aver preso visione dell'informativa resa ai sensi dell'art. 13 del Regolamento UE/2016/679 (General Data Protection Regulation), ex art. 13 GDPR, resa nella seconda pagina del presente modulo.</p>
         <p>4) di <b>autorizzare la ASD/SSD</b> all'acquisizione delle proprie immagini durante lo svolgimento delle attività didattiche della società e in occasione di esibizioni, feste e altri eventi, nonché il loro impiego a scopo informativo e pubblicitario.</p>
-        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+        <div class="consent-line">${checkbox("AUTORIZZA", iscritto.privacyImageConsent === true)}${checkbox("NON AUTORIZZA", iscritto.privacyImageConsent === false)}</div>
         <p>5) di <b>autorizzare la ASD/SSD</b> all'uso dei propri dati personali per la realizzazione di iniziative di comunicazione diretta e campagne pubblicitarie e/o promozionali.</p>
-        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+        <div class="consent-line">${checkbox("AUTORIZZA", iscritto.privacyMarketingConsent === true)}${checkbox("NON AUTORIZZA", iscritto.privacyMarketingConsent === false)}</div>
       </div>
       <div class="signature-row">
         <div class="signature-line">Data:</div>
@@ -691,7 +691,7 @@ function buildEnrollmentPrintHtml(iscritto: Iscritto) {
       <div class="minor">
         <b>PER IL MINORE DI ANNI 18</b><br /><br />
         Il sottoscritto ______________________________ (genitore / tutore) del minore suddetto chiede l'iscrizione ai corsi/lezioni individuali dello stesso, assumendo personalmente tutte le responsabilità qui sopra e dichiarando di aver preso visione dell'informativa di cui al punto 3).<br />
-        <div class="consent-line">${checkbox("AUTORIZZA")}${checkbox("NON AUTORIZZA")}</div>
+        <div class="consent-line">${checkbox("AUTORIZZA", iscritto.privacyMinorConsent === true)}${checkbox("NON AUTORIZZA", iscritto.privacyMinorConsent === false)}</div>
         <div class="signature-row"><div class="signature-line">Data:</div><div class="signature-line">Firma del genitore/tutore:</div></div>
       </div>
     </div>
