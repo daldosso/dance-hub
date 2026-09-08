@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export async function listUsers(req: Request, res: Response) {
   try {
-    await ensureUserStatusColumn();
+    await ensureUserStatusColumn(prisma);
     const users = await prisma.users.findMany({
       select: {
         id: true,
