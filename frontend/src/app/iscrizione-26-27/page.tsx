@@ -26,11 +26,8 @@ type FormState = {
   residenceProvince: string;
   residencePostalCode: string;
   gender: string;
-  skillLevel: string;
   courseId: string;
   courseTitle: string;
-  notes: string;
-  consent: boolean;
   privacyImageConsent: boolean;
   privacyMarketingConsent: boolean;
   privacyMinorConsent: boolean;
@@ -53,17 +50,13 @@ const initialForm: FormState = {
   residenceProvince: "",
   residencePostalCode: "",
   gender: "",
-  skillLevel: "Principiante",
   courseId: "",
   courseTitle: "",
-  notes: "",
-  consent: false,
   privacyImageConsent: false,
   privacyMarketingConsent: false,
   privacyMinorConsent: false,
 };
 
-const skillLevels = ["Principiante", "Intermedio", "Avanzato"];
 const genders = ["Donna", "Uomo", "Altro", "Preferisco non dirlo"];
 const PHOTO_MAX_DIMENSION = 1600;
 const PHOTO_QUALITY = 0.82;
@@ -212,11 +205,11 @@ export default function EnrollmentPage() {
       formData.append("residenceProvince", form.residenceProvince.trim().toUpperCase());
       formData.append("residencePostalCode", form.residencePostalCode.trim());
       formData.append("gender", form.gender);
-      formData.append("skillLevel", form.skillLevel);
+      formData.append("skillLevel", "");
       formData.append("courseId", form.courseId);
       formData.append("courseTitle", selectedCourse?.title ?? form.courseTitle.trim());
-      formData.append("notes", form.notes.trim());
-      formData.append("consent", String(form.consent));
+      formData.append("notes", "");
+      formData.append("consent", "true");
       formData.append("privacyImageConsent", String(form.privacyImageConsent));
       formData.append("privacyMarketingConsent", String(form.privacyMarketingConsent));
       formData.append("privacyMinorConsent", String(form.privacyMinorConsent));
@@ -363,7 +356,7 @@ export default function EnrollmentPage() {
 
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                  Telefono *
+                  Cell. *
                 </label>
                 <input
                   required
@@ -410,21 +403,6 @@ export default function EnrollmentPage() {
 
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                  Città
-                </label>
-                <input
-                  value={form.city}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, city: event.target.value }))
-                  }
-                  autoComplete="address-level2"
-                  placeholder="Es. Milano"
-                  className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Codice fiscale
                 </label>
                 <input
@@ -446,7 +424,7 @@ export default function EnrollmentPage() {
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Residenza
                 </p>
-                <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
+                <div className="grid gap-4 sm:grid-cols-[2fr_1.25fr_0.75fr_0.75fr]">
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-[#666666]">
                       Indirizzo e numero civico
@@ -461,6 +439,20 @@ export default function EnrollmentPage() {
                       }
                       autoComplete="street-address"
                       placeholder="Via Roma 10"
+                      className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#666666]">
+                      Città
+                    </label>
+                    <input
+                      value={form.city}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, city: event.target.value }))
+                      }
+                      autoComplete="address-level2"
+                      placeholder="Milano"
                       className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
                     />
                   </div>
@@ -524,33 +516,11 @@ export default function EnrollmentPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                  Livello
-                </label>
-                <select
-                  value={form.skillLevel}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      skillLevel: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
-                >
-                  {skillLevels.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="sm:col-span-2 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Corso
                 </label>
-                <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
+                <div>
                   <select
                     value={form.courseId}
                     onChange={(event) => {
@@ -576,34 +546,7 @@ export default function EnrollmentPage() {
                       </option>
                     ))}
                   </select>
-
-                  <input
-                    value={form.courseTitle}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        courseTitle: event.target.value,
-                      }))
-                    }
-                    placeholder="Oppure scrivi il corso"
-                    className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
-                  />
                 </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
-                  Note
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.notes}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, notes: event.target.value }))
-                  }
-                  placeholder="Note opzionali"
-                  className="w-full resize-none rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
-                />
               </div>
 
               <div className="sm:col-span-2 rounded-3xl border border-dashed border-[#F557BF]/30 bg-[#F557BF]/5 p-4">
@@ -685,19 +628,6 @@ export default function EnrollmentPage() {
                 )}
               </div>
             </div>
-
-            <label className="mt-4 flex gap-3 rounded-2xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4 text-sm text-[#666666]">
-              <input
-                type="checkbox"
-                checked={form.consent}
-                required
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, consent: event.target.checked }))
-                }
-                className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
-              />
-              <span>Autorizzo l&apos;uso dei dati per l&apos;iscrizione. *</span>
-            </label>
 
             <div className="mt-4 space-y-3 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
