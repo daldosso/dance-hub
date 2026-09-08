@@ -19,14 +19,21 @@ type FormState = {
   email: string;
   phone: string;
   birthDate: string;
+  birthPlace: string;
   codiceFiscale: string;
   city: string;
+  residenceAddress: string;
+  residenceProvince: string;
+  residencePostalCode: string;
   gender: string;
   skillLevel: string;
   courseId: string;
   courseTitle: string;
   notes: string;
   consent: boolean;
+  privacyImageConsent: boolean;
+  privacyMarketingConsent: boolean;
+  privacyMinorConsent: boolean;
 };
 
 type EnrollmentPhoto = {
@@ -39,14 +46,21 @@ const initialForm: FormState = {
   email: "",
   phone: "",
   birthDate: "",
+  birthPlace: "",
   codiceFiscale: "",
   city: "",
+  residenceAddress: "",
+  residenceProvince: "",
+  residencePostalCode: "",
   gender: "",
   skillLevel: "Principiante",
   courseId: "",
   courseTitle: "",
   notes: "",
   consent: false,
+  privacyImageConsent: false,
+  privacyMarketingConsent: false,
+  privacyMinorConsent: false,
 };
 
 const skillLevels = ["Principiante", "Intermedio", "Avanzato"];
@@ -191,14 +205,21 @@ export default function EnrollmentPage() {
       formData.append("email", form.email.trim());
       formData.append("phone", form.phone.trim());
       formData.append("birthDate", form.birthDate);
+      formData.append("birthPlace", form.birthPlace.trim());
       formData.append("codiceFiscale", form.codiceFiscale.trim().toUpperCase());
       formData.append("city", form.city.trim());
+      formData.append("residenceAddress", form.residenceAddress.trim());
+      formData.append("residenceProvince", form.residenceProvince.trim().toUpperCase());
+      formData.append("residencePostalCode", form.residencePostalCode.trim());
       formData.append("gender", form.gender);
       formData.append("skillLevel", form.skillLevel);
       formData.append("courseId", form.courseId);
       formData.append("courseTitle", selectedCourse?.title ?? form.courseTitle.trim());
       formData.append("notes", form.notes.trim());
       formData.append("consent", String(form.consent));
+      formData.append("privacyImageConsent", String(form.privacyImageConsent));
+      formData.append("privacyMarketingConsent", String(form.privacyMarketingConsent));
+      formData.append("privacyMinorConsent", String(form.privacyMinorConsent));
 
       if (photo.file) {
         formData.append("profilePhoto", photo.file);
@@ -374,6 +395,21 @@ export default function EnrollmentPage() {
 
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                  Luogo di nascita
+                </label>
+                <input
+                  value={form.birthPlace}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, birthPlace: event.target.value }))
+                  }
+                  autoComplete="off"
+                  placeholder="Es. Milano"
+                  className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
                   Città
                 </label>
                 <input
@@ -404,6 +440,68 @@ export default function EnrollmentPage() {
                   placeholder="RSSMRA80A01H501U"
                   className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm uppercase tracking-[0.08em] text-[#3d3d3d] outline-none transition placeholder:normal-case placeholder:tracking-normal placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
                 />
+              </div>
+
+              <div className="sm:col-span-2 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                  Residenza
+                </p>
+                <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#666666]">
+                      Indirizzo e numero civico
+                    </label>
+                    <input
+                      value={form.residenceAddress}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          residenceAddress: event.target.value,
+                        }))
+                      }
+                      autoComplete="street-address"
+                      placeholder="Via Roma 10"
+                      className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#666666]">
+                      Provincia
+                    </label>
+                    <input
+                      value={form.residenceProvince}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          residenceProvince: event.target.value.toUpperCase(),
+                        }))
+                      }
+                      maxLength={10}
+                      autoComplete="address-level1"
+                      placeholder="MI"
+                      className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm uppercase text-[#3d3d3d] outline-none transition placeholder:normal-case focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#666666]">
+                      CAP
+                    </label>
+                    <input
+                      value={form.residencePostalCode}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          residencePostalCode: event.target.value,
+                        }))
+                      }
+                      maxLength={10}
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      placeholder="20100"
+                      className="w-full rounded-2xl border border-[#F557BF]/35 bg-white px-4 py-3 text-sm text-[#3d3d3d] outline-none transition placeholder:text-[#999999] focus:border-[#F557BF] focus:ring-2 focus:ring-[#F557BF]/20"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -600,6 +698,54 @@ export default function EnrollmentPage() {
               />
               <span>Autorizzo l&apos;uso dei dati per l&apos;iscrizione. *</span>
             </label>
+
+            <div className="mt-4 space-y-3 rounded-3xl border border-[#F557BF]/20 bg-[#F557BF]/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#3d3d3d]">
+                Consensi privacy
+              </p>
+              <label className="flex gap-3 text-sm text-[#666666]">
+                <input
+                  type="checkbox"
+                  checked={form.privacyImageConsent}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      privacyImageConsent: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                />
+                <span>Acconsento all&apos;uso delle immagini per attività informative e promozionali.</span>
+              </label>
+              <label className="flex gap-3 text-sm text-[#666666]">
+                <input
+                  type="checkbox"
+                  checked={form.privacyMarketingConsent}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      privacyMarketingConsent: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                />
+                <span>Acconsento a ricevere comunicazioni e iniziative promozionali.</span>
+              </label>
+              <label className="flex gap-3 text-sm text-[#666666]">
+                <input
+                  type="checkbox"
+                  checked={form.privacyMinorConsent}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      privacyMinorConsent: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-[#F557BF]/40 bg-white text-[#F557BF] focus:ring-[#F557BF]"
+                />
+                <span>Per i minori, acconsento al trattamento dei dati e alle attività previste.</span>
+              </label>
+            </div>
 
             {errorMessage && (
               <p className="mt-4 rounded-2xl border border-[#d94c9f] bg-[#d94c9f]/10 px-4 py-3 text-sm text-[#b33e82]">
