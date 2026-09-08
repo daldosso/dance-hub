@@ -312,6 +312,30 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 }
 
+export async function GET(req: NextRequest, context: RouteContext) {
+  const auth = getAuthUser(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const userId = Number(context.params.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return NextResponse.json({ error: "ID non valido" }, { status: 400 });
+    }
+
+    const user = await serializeUser(userId);
+    if (!user) {
+      return NextResponse.json({ error: "Iscritto non trovato" }, { status: 404 });
+    }
+
+    return NextResponse.json({ user });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Errore nel recupero dell'iscritto";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest, context: RouteContext) {
   const auth = getAuthUser(req);
   if (!auth.ok) {

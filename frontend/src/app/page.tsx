@@ -287,13 +287,6 @@ function mapBackendUserToIscritto(
   };
 }
 
-function buildFormFromIscritto(iscritto: Iscritto): Omit<Iscritto, "id"> {
-  // Manteniamo la stessa shape del form, togliendo solo l'id tecnico.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id: _id, ...rest } = iscritto;
-  return rest;
-}
-
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
     switch (character) {
@@ -1671,8 +1664,7 @@ export default function Home() {
   }
 
   function handleEdit(iscritto: Iscritto) {
-    setSelezionato(iscritto);
-    setForm(buildFormFromIscritto(iscritto));
+    router.push(`/users/${iscritto.id}/edit`);
   }
 
   async function handleDelete(id: number) {
@@ -1953,16 +1945,21 @@ export default function Home() {
                 </select>
               </div>
 
-              <div className="hidden justify-end sm:flex">
+              <nav className="flex justify-end gap-2" aria-label="Navigazione principale">
                 <Link
                   href="/payments"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-sky-400/40 bg-sky-500/10 text-sky-100 shadow-sm transition hover:bg-sky-500/20"
-                  aria-label="Pagamenti"
-                  title="Pagamenti"
+                  className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-xs text-sky-100 shadow-sm transition hover:bg-sky-500/20 sm:text-sm"
                 >
                   <CreditCard className="h-4 w-4" aria-hidden="true" />
+                  <span>Pagamenti</span>
                 </Link>
-              </div>
+                <Link
+                  href="/iscrizione-26-27"
+                  className="inline-flex items-center rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100 shadow-sm transition hover:bg-emerald-500/20 sm:text-sm"
+                >
+                  Nuova iscrizione
+                </Link>
+              </nav>
             </div>
           </div>
 
@@ -2120,6 +2117,19 @@ export default function Home() {
                               }`}
                               title={i.stato}
                             />
+
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10 text-sky-100 hover:bg-sky-500/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(i);
+                              }}
+                              aria-label={`Modifica ${i.nome} ${i.cognome}`}
+                              title="Modifica"
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
+                            </button>
 
                             <button
                               type="button"
@@ -2340,7 +2350,7 @@ export default function Home() {
           </section>
 
           {/* Pannello dettaglio/modifica: solo desktop/tablet largo */}
-          <section className="hidden w-full rounded-xl border border-emerald-500/30 bg-slate-900/60 p-4 shadow-lg backdrop-blur lg:block lg:w-80">
+          <section className="hidden">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">
                 {selezionato ? "Dettaglio iscritto" : "Nuovo iscritto"}
